@@ -12,31 +12,41 @@ model User {
   email    String @unique
   password String
 
-  rooms Room[]
+  rooms Room[] @relation("RoomAdmin")
   chats Chat[]
-}
-
-model Room {
-  id      String @id @default(cuid())
-  slug    String @unique
-  adminId String
-  admin   User   @relation(fields: [adminId], references: [id])
-  chats   Chat[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+model Room {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  adminId String
+  admin   User   @relation("RoomAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+
+  chats Chat[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId])
+}
+
 model Chat {
-  id     String @id @default(cuid())
+  id String @id @default(cuid())
+
   roomId String
-  room   Room   @relation(fields: [roomId], references: [id])
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   message String
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@index([roomId])
+  @@index([userId])
 }
