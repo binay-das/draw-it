@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@repo/db": "workspace:*",
+    "dotenv": "^17.2.3",
     "ws": "^8.19.0"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
     "@repo/common": "workspace:*",
-    "@types/ws": "^8.18.1"
+    "@repo/typescript-config": "workspace:*",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.19.2"
   },
   "keywords": [],
   "author": "",
