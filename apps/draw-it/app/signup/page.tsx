@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import axios from "axios";
+import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
     const [name, setName] = useState<string>("");
@@ -27,10 +27,8 @@ export default function SignupPage() {
 
             const data = await response.data;
 
-            if (data.ok) {
-                router.push("/auth/signin");
-            } else {
-                setError(data.message || "Something went wrong");
+            if (response.status === 200) {
+                router.push("/signin");
             }
         } catch (err) {
             setError("Failed to sign up. Please try again.");
@@ -102,7 +100,7 @@ export default function SignupPage() {
 
                     <p className="mt-8 text-center text-gray-400">
                         Already have an account?{" "}
-                        <Link href="/auth/signin" className="text-blue-500 hover:underline">
+                        <Link href="/signin" className="text-blue-500 hover:underline">
                             Sign in
                         </Link>
                     </p>

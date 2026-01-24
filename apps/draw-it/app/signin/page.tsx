@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import axios from "axios";
+import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SigninPage() {
     const [email, setEmail] = useState<string>("");
@@ -25,11 +25,9 @@ export default function SigninPage() {
 
             const data = response.data;
 
-            if (data.ok) {
-                localStorage.setItem("token", data.token);
-                router.push("/");
-            } else {
-                setError(data.message || "Invalid credentials");
+            if (response.status === 200) {
+                router.refresh();
+                router.push("/draw");
             }
         } catch (err) {
             console.log(err);
@@ -90,7 +88,7 @@ export default function SigninPage() {
 
                     <p className="mt-8 text-center text-gray-400">
                         Don't have an account?{" "}
-                        <Link href="/auth/signup" className="text-blue-500 hover:underline">
+                        <Link href="/signup" className="text-blue-500 hover:underline">
                             Sign up
                         </Link>
                     </p>

@@ -36,10 +36,20 @@ export async function POST(request: NextRequest) {
 
         const token = auth.signToken(user.id);
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             message: "Signin successful",
             token
         }, { status: 200 });
+
+        response.cookies.set("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 60 * 60 * 24 * 7, // 1 week
+            sameSite: "lax",
+            path: "/"
+        });
+
+        return response;
 
     } catch (error) {
         console.error("Signin error: ", error);
