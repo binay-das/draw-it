@@ -15,18 +15,40 @@ interface User {
 
 const users: User[] = [];
 
-wss.on("connection", (ws, req) => {
-    const url = req.url;
-    if (!url) {
-        return;
-    }
+function getTokenFromCookie(cookieHeader?: string) {
+  if (!cookieHeader) return null;
 
-    const queryparams = new URLSearchParams(url);
-    const token = queryparams.get("token");
-    if (!token) {
+  const cookies: Record<string, string> = {};
+
+  cookieHeader.split(";").forEach(cookie => {
+    const [name, ...rest] = cookie.trim().split("=");
+
+    if (!name) return;
+    cookies[name] = rest.join("=");
+  });
+
+  return cookies.token ?? null;
+}
+
+
+wss.on("connection", (ws, req) => {
+  //   const url = req.url;
+  //   if (!url) {
+  //       return;
+  //   }
+  // console.log(url);
+
+  // const queryparams = url.split("?")[1];
+  //   const token = new URLSearchParams(queryparams).get("token");
+  //
+  
+  const token = getTokenFromCookie(req.headers.cookie); 
+  if (!token) {
+    console.log("no token");
         ws.close();
         return;
-    }
+  }
+  console.log(token);
     const userId = auth.getUserIdFromToken(token);
 
     if (!userId) {
@@ -119,4 +141,3 @@ wss.on("connection", (ws, req) => {
 });
 
 console.log("WebSocket server is running on ws://localhost:8080");
-
