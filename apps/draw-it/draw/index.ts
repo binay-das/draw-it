@@ -15,7 +15,7 @@ export async function initDraw(
 
     const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 
-    const shapeType: "rectangle" | "square" | "circle" = "circle";
+    const shapeType: "rectangle" | "square" | "circle" | "line" = "line";
 
     const shapes: Shape[] = [];
 
@@ -35,6 +35,17 @@ export async function initDraw(
     }
 
     function drawShape(shape: Shape) {
+        if (shapeType === "line") {
+            context.beginPath();
+            context.moveTo(shape.x, shape.y);
+            context.lineTo(
+                shape.x + shape.width,
+                shape.y + shape.height
+            );
+            context.stroke();
+            return;
+        }
+
         if (shapeType === "circle") {
             const radius = Math.min(
                 Math.abs(shape.width),
@@ -47,14 +58,15 @@ export async function initDraw(
             context.beginPath();
             context.arc(cx, cy, radius, 0, Math.PI * 2);
             context.stroke();
-        } else {
-            context.strokeRect(
-                shape.x,
-                shape.y,
-                shape.width,
-                shape.height
-            );
+            return;
         }
+
+        context.strokeRect(
+            shape.x,
+            shape.y,
+            shape.width,
+            shape.height
+        );
     }
 
     function clearCanvas() {
