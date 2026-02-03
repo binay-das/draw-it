@@ -15,13 +15,47 @@ export async function initDraw(
 
     const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 
-    const shapeType: "square" | "rectangle" = "square";
+    const shapeType: "rectangle" | "square" | "circle" = "circle";
 
     const shapes: Shape[] = [];
 
     let isClicked = false;
     let startX = 0;
     let startY = 0;
+
+    function normalizeSize(width: number, height: number) {
+        if (shapeType === "square" || shapeType === "circle") {
+            const size = Math.min(Math.abs(width), Math.abs(height));
+            return {
+                width: width < 0 ? -size : size,
+                height: height < 0 ? -size : size
+            };
+        }
+        return { width, height };
+    }
+
+    function drawShape(shape: Shape) {
+        if (shapeType === "circle") {
+            const radius = Math.min(
+                Math.abs(shape.width),
+                Math.abs(shape.height)
+            ) / 2;
+
+            const cx = shape.x + shape.width / 2;
+            const cy = shape.y + shape.height / 2;
+
+            context.beginPath();
+            context.arc(cx, cy, radius, 0, Math.PI * 2);
+            context.stroke();
+        } else {
+            context.strokeRect(
+                shape.x,
+                shape.y,
+                shape.width,
+                shape.height
+            );
+        }
+    }
 
     function clearCanvas() {
         context.fillStyle = "#ffffff";
@@ -30,39 +64,27 @@ export async function initDraw(
         context.strokeStyle = "#000000";
         context.lineWidth = 2;
 
-        shapes.forEach((shape) => {
-            context.strokeRect(
-                shape.x,
-                shape.y,
-                shape.width,
-                shape.height
-            );
-        });
+        shapes.forEach(drawShape);
     }
 
     clearCanvas();
 
-    const onMouseDown = (e: MouseEvent) => {
+    canvas.addEventListener("mousedown", (e) => {
         isClicked = true;
         const rect = canvas.getBoundingClientRect();
         startX = e.clientX - rect.left;
         startY = e.clientY - rect.top;
-    };
+    });
 
-    const onMouseUp = (e: MouseEvent) => {
+    canvas.addEventListener("mouseup", (e) => {
         if (!isClicked) return;
         isClicked = false;
 
         const rect = canvas.getBoundingClientRect();
+        const rawWidth = e.clientX - rect.left - startX;
+        const rawHeight = e.clientY - rect.top - startY;
 
-        let width = e.clientX - rect.left - startX;
-        let height = e.clientY - rect.top - startY;
-
-        if (shapeType === "square") {
-            const size = Math.min(Math.abs(width), Math.abs(height));
-            width = width < 0 ? -size : size;
-            height = height < 0 ? -size : size;
-        }
+        const { width, height } = normalizeSize(rawWidth, rawHeight);
 
         const shape: Shape = {
             x: startX,
@@ -81,47 +103,41 @@ export async function initDraw(
                 message: shape
             })
         );
-    };
+    });
 
-    const onMouseMove = (e: MouseEvent) => {
+    canvas.addEventListener("mousemove", (e) => {
         if (!isClicked) return;
 
         const rect = canvas.getBoundingClientRect();
+        const rawWidth = e.clientX - rect.left - startX;
+        const rawHeight = e.clientY - rect.top - startY;
 
-        let width = e.clientX - rect.left - startX;
-        let height = e.clientY - rect.top - startY;
-
-        if (shapeType === "square") {
-            const size = Math.min(Math.abs(width), Math.abs(height));
-            width = width < 0 ? -size : size;
-            height = height < 0 ? -size : size;
-        }
+        const { width, height } = normalizeSize(rawWidth, rawHeight);
 
         clearCanvas();
 
         context.strokeStyle = "#000000";
         context.lineWidth = 2;
-        context.strokeRect(startX, startY, width, height);
-    };
 
-    const onSocketMessage = (event: MessageEvent) => {
+        drawShape({
+            x: startX,
+            y: startY,
+            width,
+            height
+        });
+    });
+
+    socket.addEventListener("message", (event) => {
         const data = JSON.parse(event.data);
 
         if (data.type === "chat" && data.roomSlug === slug) {
             shapes.push(data.message);
             clearCanvas();
         }
-    };
-
-    canvas.addEventListener("mousedown", onMouseDown);
-    canvas.addEventListener("mouseup", onMouseUp);
-    canvas.addEventListener("mousemove", onMouseMove);
-    socket.addEventListener("message", onSocketMessage);
+    });
 
     return () => {
-        canvas.removeEventListener("mousedown", onMouseDown);
-        canvas.removeEventListener("mouseup", onMouseUp);
-        canvas.removeEventListener("mousemove", onMouseMove);
-        socket.removeEventListener("message", onSocketMessage);
+        canvas.replaceWith(canvas.cloneNode(true));
+        socket.onmessage = null;
     };
 }
