@@ -122,52 +122,36 @@ wss.on("connection", (ws, req) => {
         }
 
         if (parsedData.type === "chat") {
-            const user = users.find((user) => user.userId === userId);
-            if (!user) {
-                return;
+        const user = users.find((u) => u.userId === userId);
+        if (!user) return;
+
+        const roomSlug = parsedData.roomSlug;
+        if (!user.roomSlugs.includes(roomSlug)) return;
+
+        const message = JSON.stringify(parsedData.message);
+
+        users.forEach((u) => {
+            if (u.roomSlugs.includes(roomSlug)) {
+            u.ws.send(JSON.stringify({
+                type: "chat",
+                roomSlug,
+                message: JSON.parse(message) 
+            }));
             }
-            const roomSlug = parsedData.roomSlug;
+        });
 
-            if (!user.roomSlugs.includes(roomSlug)) {
-                console.log(`User ${userId} not in room ${roomSlug}`);
-                return;
+        const room = await prisma.room.findUnique({ where: { slug: roomSlug } });
+        if (!room) return;
+
+        await prisma.chat.create({
+            data: {
+            roomId: room.id,
+            message, 
+            userId
             }
-            const message = parsedData.message;
-            users.forEach((user) => {
-                if (user.roomSlugs.includes(roomSlug)) {
-                    user.ws.send(JSON.stringify({
-                        type: "chat",
-                        roomSlug,
-                        message
-                    }));
-                }
-            })
+        });
+    }
 
-            console.log(`User ${userId} sent message ${message} to room ${roomSlug}`);
-
-            const room = await prisma.room.findUnique({
-                where: {
-                    slug: roomSlug
-                }
-            });
-            if (!room) {
-                console.log("room not found");
-                return;
-            }
-
-            const newMsg = await prisma.chat.create({
-                data: {
-                    roomId: room.id,
-                    message,
-                    userId
-                }
-            });
-            if (newMsg) {
-                console.log("msg saved in db");
-            }
-
-
-        }
     })
 
     ws.on("close", () => {
