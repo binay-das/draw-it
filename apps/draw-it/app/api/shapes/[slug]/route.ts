@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@repo/db";
 import { auth } from "@repo/common";
 
+type ShapeType = "rectangle" | "square" | "circle" | "line";
+
 interface Shape {
+    type: ShapeType;
     x: number;
     y: number;
     width: number;
@@ -56,7 +59,14 @@ export async function GET(
 
         const shapes: Shape[] = chats.map((chat) => {
             try {
-                return JSON.parse(chat.message) as Shape;
+                const parsed = JSON.parse(chat.message);
+                return {
+                    type: parsed.type || "rectangle",
+                    x: parsed.x,
+                    y: parsed.y,
+                    width: parsed.width,
+                    height: parsed.height
+                } as Shape;
             } catch (error) {
                 console.error("Error parsing shape:", error);
                 return null;
