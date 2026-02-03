@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useSocket } from "../../../hooks/useSocket";
 import { initDraw, ShapeType } from "../../../draw";
-import { Square, Circle, RectangleHorizontal, Minus } from "lucide-react";
+import { Square, Circle, RectangleHorizontal, Minus, ArrowRight } from "lucide-react";
 
 export default function Page({
     params
@@ -49,7 +49,8 @@ export default function Page({
         { type: "rectangle", label: "Rectangle", Icon: RectangleHorizontal },
         { type: "square", label: "Square", Icon: Square },
         { type: "circle", label: "Circle", Icon: Circle },
-        { type: "line", label: "Line", Icon: Minus }
+        { type: "line", label: "Line", Icon: Minus },
+        { type: "arrow", label: "Arrow", Icon: ArrowRight }
     ];
 
     return (

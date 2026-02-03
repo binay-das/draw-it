@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@repo/db";
 import { auth } from "@repo/common";
 
-type ShapeType = "rectangle" | "square" | "circle" | "line";
+type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow";
 
 interface Shape {
     type: ShapeType;

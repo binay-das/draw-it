@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export type ShapeType = "rectangle" | "square" | "circle" | "line";
+export type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow";
 
 interface Shape {
     type: ShapeType;
@@ -56,6 +56,36 @@ export async function initDraw(
             return;
         }
 
+        if (shape.type === "arrow") {
+            const startX = shape.x;
+            const startY = shape.y;
+            const endX = shape.x + shape.width;
+            const endY = shape.y + shape.height;
+
+            context.beginPath();
+            context.moveTo(startX, startY);
+            context.lineTo(endX, endY);
+            context.stroke();
+
+            const angle = Math.atan2(endY - startY, endX - startX);
+            const headLength = 15;
+            const headAngle = Math.PI / 6; 
+
+            context.beginPath();
+            context.moveTo(endX, endY);
+            context.lineTo(
+                endX - headLength * Math.cos(angle - headAngle),
+                endY - headLength * Math.sin(angle - headAngle)
+            );
+            context.moveTo(endX, endY);
+            context.lineTo(
+                endX - headLength * Math.cos(angle + headAngle),
+                endY - headLength * Math.sin(angle + headAngle)
+            );
+            context.stroke();
+            return;
+        }
+
         if (shape.type === "circle") {
             const radius = Math.min(Math.abs(shape.width), Math.abs(shape.height)) / 2;
             const cx = shape.x + shape.width / 2;
@@ -68,9 +98,9 @@ export async function initDraw(
         }
 
         context.strokeRect(
-            shape.x, 
-            shape.y, 
-            shape.width, 
+            shape.x,
+            shape.y,
+            shape.width,
             shape.height
         );
     }
