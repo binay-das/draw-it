@@ -1,3 +1,5 @@
+import axios from "axios";
+
 interface Shape {
     x: number;
     y: number;
@@ -18,6 +20,15 @@ export async function initDraw(
     const shapeType: "rectangle" | "square" | "circle" | "line" = "line";
 
     const shapes: Shape[] = [];
+
+    try {
+        const response = await axios.get<{ shapes: Shape[] }>(`/api/shapes/${slug}`);
+        if (response.data && response.data.shapes) {
+            shapes.push(...response.data.shapes);
+        }
+    } catch (error) {
+        console.error("Error fetching existing shapes:", error);
+    }
 
     let isClicked = false;
     let startX = 0;
