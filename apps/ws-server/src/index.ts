@@ -4,6 +4,7 @@ dotenv.config({ path: path.join(process.cwd(), "../../.env") });
 
 import { WebSocketServer, WebSocket } from "ws";
 import { auth } from "@repo/common";
+import prisma from "@repo/db";
 
 const wss = new WebSocketServer({ port: 8080 });
 
@@ -64,7 +65,7 @@ wss.on("connection", (ws, req) => {
 
     console.log("Client connected, id: ", userId);
 
-    ws.on("message", (data) => {
+    ws.on("message", async (data) => {
         console.log("Raw Message received: ", data);
 
         const parsedData = JSON.parse(data.toString());
@@ -83,6 +84,27 @@ wss.on("connection", (ws, req) => {
             }
             user.roomSlugs.push(roomSlug);
             console.log(`User ${userId} joined room ${roomSlug}`);
+
+            const room = await prisma.room.findUnique({
+                where: {
+                    slug: roomSlug
+                }
+            })
+            if (room) {
+                console.log("room already in db")
+            }
+            if (!room) {
+                await prisma.room.create({
+                    data: {
+                        slug: roomSlug,
+                        adminId: userId
+                    }
+                });
+                console.log("room pushed to db")
+            }
+            
+
+            console.log("total no of connected users: ", users.length);
         }
 
         if (parsedData.type === "leave") {
@@ -122,6 +144,28 @@ wss.on("connection", (ws, req) => {
             })
 
             console.log(`User ${userId} sent message ${message} to room ${roomSlug}`);
+
+            const room = await prisma.room.findUnique({
+                where: {
+                    slug: roomSlug
+                }
+            });
+            if (!room) {
+                console.log("room not found");
+                return;
+            }
+
+            const newMsg = await prisma.chat.create({
+                data: {
+                    roomId: room.id,
+                    message,
+                    userId
+                }
+            });
+            if (newMsg) {
+                console.log("msg saved in db");
+            }
+
 
         }
     })
