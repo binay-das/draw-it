@@ -15,9 +15,8 @@ export async function initDraw(
 
     const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 
-    
+    const shapeType: "square" | "rectangle" = "square";
 
-    
     const shapes: Shape[] = [];
 
     let isClicked = false;
@@ -55,14 +54,21 @@ export async function initDraw(
         isClicked = false;
 
         const rect = canvas.getBoundingClientRect();
-        const endX = e.clientX - rect.left;
-        const endY = e.clientY - rect.top;
+
+        let width = e.clientX - rect.left - startX;
+        let height = e.clientY - rect.top - startY;
+
+        if (shapeType === "square") {
+            const size = Math.min(Math.abs(width), Math.abs(height));
+            width = width < 0 ? -size : size;
+            height = height < 0 ? -size : size;
+        }
 
         const shape: Shape = {
             x: startX,
             y: startY,
-            width: endX - startX,
-            height: endY - startY
+            width,
+            height
         };
 
         shapes.push(shape);
@@ -81,19 +87,21 @@ export async function initDraw(
         if (!isClicked) return;
 
         const rect = canvas.getBoundingClientRect();
-        const currentX = e.clientX - rect.left;
-        const currentY = e.clientY - rect.top;
+
+        let width = e.clientX - rect.left - startX;
+        let height = e.clientY - rect.top - startY;
+
+        if (shapeType === "square") {
+            const size = Math.min(Math.abs(width), Math.abs(height));
+            width = width < 0 ? -size : size;
+            height = height < 0 ? -size : size;
+        }
 
         clearCanvas();
 
         context.strokeStyle = "#000000";
         context.lineWidth = 2;
-        context.strokeRect(
-            startX,
-            startY,
-            currentX - startX,
-            currentY - startY
-        );
+        context.strokeRect(startX, startY, width, height);
     };
 
     const onSocketMessage = (event: MessageEvent) => {
