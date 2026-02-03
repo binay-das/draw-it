@@ -8,7 +8,7 @@ export default function Home() {
       <div>HomePage</div>
       <Link href="/signin">Login</Link>
       <Link href="/signup">Register</Link>
-      <Link href={"/draw"}>
+      <Link href={"/canvas"}>
         <Button>Draw</Button>
       </Link>
     </div>
