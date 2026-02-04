@@ -92,24 +92,17 @@ wss.on("connection", (ws, req) => {
             user.roomSlugs.push(roomSlug);
             console.log(`User ${userId} joined room ${roomSlug}`);
 
-            const room = await prisma.room.findUnique({
-                where: {
-                    slug: roomSlug
-                }
-            })
-            if (room) {
-                console.log("room already in db")
-            }
-            if (!room) {
-                await prisma.room.create({
-                    data: {
-                        slug: roomSlug,
-                        adminId: userId
-                    }
-                });
-                console.log("room pushed to db")
-            }
 
+            await prisma.room.upsert({
+                where: { slug: roomSlug },
+                update: {},
+                create: {
+                    slug: roomSlug,
+                    adminId: userId
+                }
+            });
+
+            console.log("room pushed to db")
 
             console.log("total no of connected users: ", users.length);
         }
