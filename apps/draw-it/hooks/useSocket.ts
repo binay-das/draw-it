@@ -5,7 +5,13 @@ export function useSocket() {
   const [socket, setSocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080");
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!wsUrl) {
+      console.error("NEXT_PUBLIC_WS_URL is not defined");
+      return;
+    }
+    
+    const ws = new WebSocket(wsUrl);
     console.log("trying to connect to WebSocket");
 
     ws.onopen = () => {
