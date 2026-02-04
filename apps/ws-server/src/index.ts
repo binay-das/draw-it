@@ -148,14 +148,15 @@ wss.on("connection", (ws, req) => {
                 }
             });
 
-            const room = await prisma.room.findUnique({ where: { slug: roomSlug } });
-            if (!room) return;
-
             await prisma.chat.create({
                 data: {
-                    roomId: room.id,
                     message,
-                    userId
+                    user: {
+                        connect: { id: userId }
+                    },
+                    room: {
+                        connect: { slug: roomSlug }
+                    }
                 }
             });
         }
