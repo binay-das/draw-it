@@ -84,7 +84,7 @@ export async function initDraw(
             context.stroke();
 
             const angle = Math.atan2(endY - startY, endX - startX);
-            const headLength = 15;
+            const headLength = 15 / scale;
             const headAngle = Math.PI / 6;
 
             context.beginPath();
