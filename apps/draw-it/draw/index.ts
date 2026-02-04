@@ -23,6 +23,14 @@ export async function initDraw(
 
     const shapes: Shape[] = [];
 
+    // zoom and pan state
+    let scale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isPanning = false;
+    let panStartX = 0;
+    let panStartY = 0;
+
     try {
         const response = await axios.get<{ shapes: Shape[] }>(`/api/shapes/${slug}`);
         if (response.data && response.data.shapes) {
@@ -35,6 +43,14 @@ export async function initDraw(
     let isClicked = false;
     let startX = 0;
     let startY = 0;
+
+    // screen coordinates to canvas coordinates
+    function screenToCanvas(screenX: number, screenY: number) {
+        return {
+            x: (screenX - offsetX) / scale,
+            y: (screenY - offsetY) / scale
+        };
+    }
 
     function normalizeSize(width: number, height: number) {
         if (shapeType === "square" || shapeType === "circle") {
@@ -69,7 +85,7 @@ export async function initDraw(
 
             const angle = Math.atan2(endY - startY, endX - startX);
             const headLength = 15;
-            const headAngle = Math.PI / 6; 
+            const headAngle = Math.PI / 6;
 
             context.beginPath();
             context.moveTo(endX, endY);
@@ -106,29 +122,55 @@ export async function initDraw(
     }
 
     function clearCanvas() {
+        context.setTransform(1, 0, 0, 1, 0, 0);
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, canvas.width, canvas.height);
+
+        context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+
         context.strokeStyle = "#000000";
-        context.lineWidth = 2;
+        context.lineWidth = 2 / scale;
         shapes.forEach(drawShape);
     }
 
     clearCanvas();
 
     const handleMouseDown = (e: MouseEvent) => {
-        isClicked = true;
         const rect = canvas.getBoundingClientRect();
-        startX = e.clientX - rect.left;
-        startY = e.clientY - rect.top;
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        if (e.button === 1 || e.ctrlKey || e.metaKey) {
+            isPanning = true;
+            panStartX = screenX;
+            panStartY = screenY;
+            canvas.style.cursor = "grab";
+            return;
+        }
+
+        isClicked = true;
+        const canvasCoords = screenToCanvas(screenX, screenY);
+        startX = canvasCoords.x;
+        startY = canvasCoords.y;
     };
 
     const handleMouseUp = (e: MouseEvent) => {
+        if (isPanning) {
+            isPanning = false;
+            canvas.style.cursor = "default";
+            return;
+        }
+
         if (!isClicked) return;
         isClicked = false;
 
         const rect = canvas.getBoundingClientRect();
-        const rawWidth = e.clientX - rect.left - startX;
-        const rawHeight = e.clientY - rect.top - startY;
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const canvasCoords = screenToCanvas(screenX, screenY);
+
+        const rawWidth = canvasCoords.x - startX;
+        const rawHeight = canvasCoords.y - startY;
         const { width, height } = normalizeSize(rawWidth, rawHeight);
 
         const shape: Shape = {
@@ -150,18 +192,33 @@ export async function initDraw(
     };
 
     const handleMouseMove = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        if (isPanning) {
+            const dx = screenX - panStartX;
+            const dy = screenY - panStartY;
+            offsetX += dx;
+            offsetY += dy;
+            panStartX = screenX;
+            panStartY = screenY;
+            clearCanvas();
+            return;
+        }
+
         if (!isClicked) return;
 
-        const rect = canvas.getBoundingClientRect();
-        const rawWidth = e.clientX - rect.left - startX;
-        const rawHeight = e.clientY - rect.top - startY;
+        const canvasCoords = screenToCanvas(screenX, screenY);
+        const rawWidth = canvasCoords.x - startX;
+        const rawHeight = canvasCoords.y - startY;
 
         const { width, height } = normalizeSize(rawWidth, rawHeight);
 
         clearCanvas();
 
         context.strokeStyle = "#000000";
-        context.lineWidth = 2;
+        context.lineWidth = 2 / scale;
 
         drawShape({
             type: shapeType,
@@ -170,6 +227,25 @@ export async function initDraw(
             width,
             height
         });
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+        e.preventDefault();
+
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // zoom factor
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        const newScale = Math.min(Math.max(scale * zoomFactor, 0.1), 10);
+
+        const scaleDiff = newScale - scale;
+        offsetX -= (mouseX - offsetX) * (scaleDiff / scale);
+        offsetY -= (mouseY - offsetY) * (scaleDiff / scale);
+
+        scale = newScale;
+        clearCanvas();
     };
 
     const handleSocketMessage = (event: MessageEvent) => {
@@ -184,12 +260,14 @@ export async function initDraw(
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("mouseup", handleMouseUp);
     canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
     socket.addEventListener("message", handleSocketMessage);
 
     return () => {
         canvas.removeEventListener("mousedown", handleMouseDown);
         canvas.removeEventListener("mouseup", handleMouseUp);
         canvas.removeEventListener("mousemove", handleMouseMove);
+        canvas.removeEventListener("wheel", handleWheel);
         socket.removeEventListener("message", handleSocketMessage);
     };
 }
