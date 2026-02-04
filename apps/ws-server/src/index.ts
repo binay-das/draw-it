@@ -75,7 +75,15 @@ wss.on("connection", (ws, req) => {
     ws.on("message", async (data) => {
         console.log("Raw Message received: ", data);
 
-        const parsedData = JSON.parse(data.toString());
+        let parsedData: any;
+
+        try {
+            parsedData = JSON.parse(data.toString());
+        } catch (err) {
+            console.error("Invalid JSON received (length): ", data.toString().length);
+            return;
+        }
+
         console.log("Parsed Data: ", parsedData);
 
         if (parsedData.type === "join") {
