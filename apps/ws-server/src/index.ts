@@ -17,39 +17,46 @@ interface User {
 const users: User[] = [];
 
 function getTokenFromCookie(cookieHeader?: string) {
-  if (!cookieHeader) return null;
+    if (!cookieHeader) return null;
 
-  const cookies: Record<string, string> = {};
+    const cookies: Record<string, string> = {};
 
-  cookieHeader.split(";").forEach(cookie => {
-    const [name, ...rest] = cookie.trim().split("=");
+    cookieHeader.split(";").forEach(cookie => {
+        const [name, ...rest] = cookie.trim().split("=");
 
-    if (!name) return;
-    cookies[name] = rest.join("=");
-  });
+        if (!name) return;
+        cookies[name] = rest.join("=");
+    });
 
-  return cookies.token ?? null;
+    return cookies.token ?? null;
+}
+
+function isAllowedOrigin(origin?: string): boolean {
+    if (!origin) return false;
+
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",");
+    if (!allowedOrigins) return false;
+
+    return allowedOrigins.includes(origin);
 }
 
 
 wss.on("connection", (ws, req) => {
-  //   const url = req.url;
-  //   if (!url) {
-  //       return;
-  //   }
-  // console.log(url);
 
-  // const queryparams = url.split("?")[1];
-  //   const token = new URLSearchParams(queryparams).get("token");
-  //
-  
-  const token = getTokenFromCookie(req.headers.cookie); 
-  if (!token) {
-    console.log("no token");
+    const origin = req.headers.origin;
+    if (!isAllowedOrigin(origin)) {
+        console.log("Unauthorized origin:", origin);
+        ws.close(1008, "Unauthorized origin");
+        return;
+    }
+
+    const token = getTokenFromCookie(req.headers.cookie);
+    if (!token) {
+        console.log("no token");
         ws.close();
         return;
-  }
-  console.log(token);
+    }
+    console.log(token);
     const userId = auth.getUserIdFromToken(token);
 
     if (!userId) {
@@ -102,7 +109,7 @@ wss.on("connection", (ws, req) => {
                 });
                 console.log("room pushed to db")
             }
-            
+
 
             console.log("total no of connected users: ", users.length);
         }
@@ -122,35 +129,35 @@ wss.on("connection", (ws, req) => {
         }
 
         if (parsedData.type === "chat") {
-        const user = users.find((u) => u.userId === userId);
-        if (!user) return;
+            const user = users.find((u) => u.userId === userId);
+            if (!user) return;
 
-        const roomSlug = parsedData.roomSlug;
-        if (!user.roomSlugs.includes(roomSlug)) return;
+            const roomSlug = parsedData.roomSlug;
+            if (!user.roomSlugs.includes(roomSlug)) return;
 
-        const message = JSON.stringify(parsedData.message);
+            const message = JSON.stringify(parsedData.message);
 
-        users.forEach((u) => {
-            if (u.roomSlugs.includes(roomSlug)) {
-            u.ws.send(JSON.stringify({
-                type: "chat",
-                roomSlug,
-                message: JSON.parse(message) 
-            }));
-            }
-        });
+            users.forEach((u) => {
+                if (u.roomSlugs.includes(roomSlug)) {
+                    u.ws.send(JSON.stringify({
+                        type: "chat",
+                        roomSlug,
+                        message: JSON.parse(message)
+                    }));
+                }
+            });
 
-        const room = await prisma.room.findUnique({ where: { slug: roomSlug } });
-        if (!room) return;
+            const room = await prisma.room.findUnique({ where: { slug: roomSlug } });
+            if (!room) return;
 
-        await prisma.chat.create({
-            data: {
-            roomId: room.id,
-            message, 
-            userId
-            }
-        });
-    }
+            await prisma.chat.create({
+                data: {
+                    roomId: room.id,
+                    message,
+                    userId
+                }
+            });
+        }
 
     })
 
