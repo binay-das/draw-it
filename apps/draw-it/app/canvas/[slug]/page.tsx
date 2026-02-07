@@ -13,6 +13,7 @@ export default function Page({
     const { slug } = use(params);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [selectedShape, setSelectedShape] = useState<ShapeType>("rectangle");
+    const shapeTypeRef = useRef<ShapeType>(selectedShape);
 
     const { socket } = useSocket();
 
@@ -28,10 +29,14 @@ export default function Page({
     }, [socket, slug]);
 
     useEffect(() => {
+        shapeTypeRef.current = selectedShape;
+    }, [selectedShape]);
+
+    useEffect(() => {
         let cleanup: (() => void) | null = null;
 
         if (canvasRef.current && socket) {
-            initDraw(canvasRef.current, slug, socket, selectedShape).then((cleanupFn) => {
+            initDraw(canvasRef.current, slug, socket, shapeTypeRef).then((cleanupFn) => {
                 cleanup = cleanupFn;
             });
         }
@@ -39,7 +44,7 @@ export default function Page({
         return () => {
             if (cleanup) cleanup();
         };
-    }, [slug, socket, selectedShape]);
+    }, [slug, socket]);
 
     if (!socket) {
         return <div className="w-full h-screen">Loading…</div>;

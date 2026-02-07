@@ -14,7 +14,7 @@ export async function initDraw(
     canvas: HTMLCanvasElement,
     slug: string,
     socket: WebSocket,
-    shapeType: ShapeType = "rectangle"
+    shapeTypeRef: { current: ShapeType }
 ) {
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
@@ -53,7 +53,7 @@ export async function initDraw(
     }
 
     function normalizeSize(width: number, height: number) {
-        if (shapeType === "square" || shapeType === "circle") {
+        if (shapeTypeRef.current === "square" || shapeTypeRef.current === "circle") {
             const size = Math.min(Math.abs(width), Math.abs(height));
             return {
                 width: width < 0 ? -size : size,
@@ -174,7 +174,7 @@ export async function initDraw(
         const { width, height } = normalizeSize(rawWidth, rawHeight);
 
         const shape: Shape = {
-            type: shapeType,
+            type: shapeTypeRef.current,
             x: startX,
             y: startY,
             width,
@@ -221,7 +221,7 @@ export async function initDraw(
         context.lineWidth = 2 / scale;
 
         drawShape({
-            type: shapeType,
+            type: shapeTypeRef.current,
             x: startX,
             y: startY,
             width,
