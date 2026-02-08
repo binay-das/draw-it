@@ -10,6 +10,33 @@ interface Shape {
     height: number;
 }
 
+interface ViewportState {
+    scale: number;
+    offsetX: number;
+    offsetY: number;
+}
+
+function saveViewport(slug: string, scale: number, offsetX: number, offsetY: number) {
+    try {
+        const state: ViewportState = { scale, offsetX, offsetY };
+        localStorage.setItem(`canvas-viewport-${slug}`, JSON.stringify(state));
+    } catch (error) {
+        console.error("Failed to save viewport state:", error);
+    }
+}
+
+function loadViewport(slug: string): ViewportState {
+    try {
+        const saved = localStorage.getItem(`canvas-viewport-${slug}`);
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    } catch (error) {
+        console.error("Failed to load viewport state:", error);
+    }
+    return { scale: 1, offsetX: 0, offsetY: 0 };
+}
+
 export async function initDraw(
     canvas: HTMLCanvasElement,
     slug: string,
@@ -23,13 +50,25 @@ export async function initDraw(
 
     const shapes: Shape[] = [];
 
+    // load saved viewport state
+    const savedViewport = loadViewport(slug);
+
     // zoom and pan state
-    let scale = 1;
-    let offsetX = 0;
-    let offsetY = 0;
+    let scale = savedViewport.scale;
+    let offsetX = savedViewport.offsetX;
+    let offsetY = savedViewport.offsetY;
     let isPanning = false;
     let panStartX = 0;
     let panStartY = 0;
+
+    // debounce timer for saving viewport
+    let saveTimer: NodeJS.Timeout | null = null;
+    function debouncedSaveViewport() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+            saveViewport(slug, scale, offsetX, offsetY);
+        }, 300);
+    }
 
     try {
         const response = await axios.get<{ shapes: Shape[] }>(`/api/shapes/${slug}`);
@@ -204,6 +243,7 @@ export async function initDraw(
             panStartX = screenX;
             panStartY = screenY;
             clearCanvas();
+            debouncedSaveViewport();
             return;
         }
 
@@ -246,6 +286,7 @@ export async function initDraw(
 
         scale = newScale;
         clearCanvas();
+        debouncedSaveViewport();
     };
 
     const handleSocketMessage = (event: MessageEvent) => {
