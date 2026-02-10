@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@repo/db";
 import { auth } from "@repo/common";
 
-type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow";
+type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow" | "text";
 
 interface Shape {
     type: ShapeType;
@@ -10,6 +10,7 @@ interface Shape {
     y: number;
     width: number;
     height: number;
+    text?: string;
 }
 
 export async function GET(
@@ -60,13 +61,18 @@ export async function GET(
         const shapes: Shape[] = chats.map((chat) => {
             try {
                 const parsed = JSON.parse(chat.message);
-                return {
+                const shape: Shape = {
                     type: parsed.type || "rectangle",
                     x: parsed.x,
                     y: parsed.y,
                     width: parsed.width,
                     height: parsed.height
-                } as Shape;
+                };
+                // including text property if it exists
+                if (parsed.text) {
+                    shape.text = parsed.text;
+                }
+                return shape;
             } catch (error) {
                 console.error("Error parsing shape:", error);
                 return null;

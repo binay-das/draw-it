@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useSocket } from "../../../hooks/useSocket";
 import { initDraw, ShapeType } from "../../../draw";
-import { Square, Circle, RectangleHorizontal, Minus, ArrowRight } from "lucide-react";
+import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type } from "lucide-react";
 
 export default function Page({
     params
@@ -12,7 +12,15 @@ export default function Page({
 }) {
     const { slug } = use(params);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [selectedShape, setSelectedShape] = useState<ShapeType>("rectangle");
+    const [selectedShape, setSelectedShape] = useState<ShapeType>(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("selected-shape");
+            if (saved && ["rectangle", "square", "circle", "line", "arrow", "text"].includes(saved)) {
+                return saved as ShapeType;
+            }
+        }
+        return "rectangle";
+    });
     const shapeTypeRef = useRef<ShapeType>(selectedShape);
 
     const { socket } = useSocket();
@@ -30,6 +38,9 @@ export default function Page({
 
     useEffect(() => {
         shapeTypeRef.current = selectedShape;
+        if (typeof window !== "undefined") {
+            localStorage.setItem("selected-shape", selectedShape);
+        }
     }, [selectedShape]);
 
     useEffect(() => {
@@ -55,7 +66,8 @@ export default function Page({
         { type: "square", label: "Square", Icon: Square },
         { type: "circle", label: "Circle", Icon: Circle },
         { type: "line", label: "Line", Icon: Minus },
-        { type: "arrow", label: "Arrow", Icon: ArrowRight }
+        { type: "arrow", label: "Arrow", Icon: ArrowRight },
+        { type: "text", label: "Text", Icon: Type }
     ];
 
     return (

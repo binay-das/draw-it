@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow";
+export type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow" | "text";
 
 interface Shape {
     type: ShapeType;
@@ -8,6 +8,7 @@ interface Shape {
     y: number;
     width: number;
     height: number;
+    text?: string;
 }
 
 interface ViewportState {
@@ -83,6 +84,98 @@ export async function initDraw(
     let startX = 0;
     let startY = 0;
 
+    const textInput = document.createElement("input");
+    textInput.type = "text";
+    textInput.style.position = "absolute";
+    textInput.style.border = "2px solid #4A90E2";
+    textInput.style.padding = "4px 8px";
+    textInput.style.fontSize = "16px";
+    textInput.style.fontFamily = "Arial";
+    textInput.style.zIndex = "1000";
+    textInput.style.display = "none";
+    textInput.style.outline = "none";
+    textInput.style.borderRadius = "4px";
+    if (canvas.parentElement) {
+        canvas.parentElement.appendChild(textInput);
+    }
+
+    let editingTextIndex: number | null = null;
+
+    function showTextInput(canvasX: number, canvasY: number, initialText = "") {
+        const rect = canvas.getBoundingClientRect();
+        const screenX = canvasX * scale + offsetX + rect.left;
+        const screenY = canvasY * scale + offsetY + rect.top;
+
+        textInput.style.left = `${screenX}px`;
+        textInput.style.top = `${screenY - 20}px`;
+        textInput.value = initialText;
+        textInput.style.display = "block";
+        textInput.focus();
+    }
+
+    function hideTextInput() {
+        textInput.style.display = "none";
+        textInput.value = "";
+        editingTextIndex = null;
+    }
+
+    function handleTextInputComplete() {
+        const text = textInput.value.trim();
+        if (!text) {
+            hideTextInput();
+            return;
+        }
+
+        if (editingTextIndex !== null) {
+            const shape = shapes[editingTextIndex];
+            if (shape) {
+                shape.text = text;
+                socket.send(JSON.stringify({
+                    type: "chat",
+                    roomSlug: slug,
+                    message: shape
+                }));
+            }
+        } else {
+            const canvasCoords = screenToCanvas(
+                parseInt(textInput.style.left) - canvas.getBoundingClientRect().left,
+                parseInt(textInput.style.top) + 20 - canvas.getBoundingClientRect().top
+            );
+
+            const textShape: Shape = {
+                type: "text",
+                x: canvasCoords.x,
+                y: canvasCoords.y,
+                width: 0,
+                height: 0,
+                text
+            };
+
+            shapes.push(textShape);
+            socket.send(JSON.stringify({
+                type: "chat",
+                roomSlug: slug,
+                message: textShape
+            }));
+        }
+
+        clearCanvas();
+        hideTextInput();
+    }
+
+    textInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleTextInputComplete();
+        } else if (e.key === "Escape") {
+            hideTextInput();
+        }
+    });
+
+    textInput.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
+    });
+
     // screen coordinates to canvas coordinates
     function screenToCanvas(screenX: number, screenY: number) {
         return {
@@ -152,6 +245,14 @@ export async function initDraw(
             return;
         }
 
+        if (shape.type === "text" && shape.text) {
+            const fontSize = 16 / scale;
+            context.font = `${fontSize}px Arial`;
+            context.fillStyle = "#000000";
+            context.fillText(shape.text, shape.x, shape.y);
+            return;
+        }
+
         context.strokeRect(
             shape.x,
             shape.y,
@@ -184,6 +285,13 @@ export async function initDraw(
             panStartX = screenX;
             panStartY = screenY;
             canvas.style.cursor = "grab";
+            return;
+        }
+
+        // handle text tool
+        if (shapeTypeRef.current === "text") {
+            const canvasCoords = screenToCanvas(screenX, screenY);
+            showTextInput(canvasCoords.x, canvasCoords.y);
             return;
         }
 
