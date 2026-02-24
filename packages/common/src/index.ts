@@ -51,18 +51,49 @@ function verifyToken(token: string): AuthPayload {
     return decoded;
 }
 
+export type TokenValidationResult =
+    | { valid: true; id: string }
+    | { valid: false; error: "EXPIRED" | "INVALID"; message: string };
+
+function verifyTokenSafe(token: string): TokenValidationResult {
+    try {
+        const decoded = jwt.verify(token, getJwtSecret());
+        if (typeof decoded === "string" || !isAuthPayload(decoded)) {
+            return { valid: false, error: "INVALID", message: "Invalid JWT payload" };
+        }
+        return { valid: true, id: decoded.id };
+    } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+            return { valid: false, error: "EXPIRED", message: "Token expired" };
+        }
+        return { valid: false, error: "INVALID", message: "Invalid token structure or signature" };
+    }
+}
+
+function refreshToken(expiredToken: string): string | null {
+    try {
+        const decoded = jwt.verify(expiredToken, getJwtSecret(), { ignoreExpiration: true });
+        if (typeof decoded === "string" || !isAuthPayload(decoded)) {
+            return null;
+        }
+        // Issue new token
+        return signToken(decoded.id);
+    } catch (error) {
+        return null; 
+    }
+}
+
 function getUserIdFromToken(token?: string): string | null {
     if (!token) {
         return null;
     }
 
-    try {
-        const decoded = verifyToken(token);
-        return decoded.id;
-    } catch (error) {
-        console.error("Error verifying token:", error);
+    const result = verifyTokenSafe(token);
+    if (!result.valid) {
+        // Silent error return to prevent console log spam
         return null;
     }
+    return result.id;
 }
 
 async function hashPassword(password: string): Promise<string> {
@@ -77,6 +108,8 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 export const auth = {
     signToken,
     verifyToken,
+    verifyTokenSafe,
+    refreshToken,
     getUserIdFromToken
 };
 
