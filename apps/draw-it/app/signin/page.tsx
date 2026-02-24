@@ -27,7 +27,7 @@ export default function SigninPage() {
 
             if (response.status === 200) {
                 router.refresh();
-                router.push("/draw");
+                router.push("/canvas");
             }
         } catch (err) {
             console.log(err);
