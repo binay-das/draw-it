@@ -57,12 +57,15 @@ wss.on("connection", (ws, req) => {
         return;
     }
     console.log(token);
-    const userId = auth.getUserIdFromToken(token);
+    const authResult = auth.verifyTokenSafe(token);
 
-    if (!userId) {
-        ws.close();
+    if (!authResult.valid) {
+        console.log("Token validation failed:", authResult.message);
+        ws.close(1008, authResult.message);
         return;
     }
+
+    const userId = authResult.id;
 
     users.push({
         userId,
