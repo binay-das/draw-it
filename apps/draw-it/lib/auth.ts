@@ -7,9 +7,10 @@ export async function getAuthUser(): Promise<{ id: string } | null> {
 
   if (!token) return null;
 
-  try {
-    return auth.verifyToken(token);
-  } catch {
+  const result = auth.verifyTokenSafe(token);
+  if (!result.valid) {
     return null;
   }
+
+  return { id: result.id };
 }
