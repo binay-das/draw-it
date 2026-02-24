@@ -26,13 +26,15 @@ export async function GET(
             );
         }
 
-        const userId = auth.getUserIdFromToken(token);
-        if (!userId) {
+        const authResult = auth.verifyTokenSafe(token);
+        if (!authResult.valid) {
             return NextResponse.json(
-                { error: "Invalid token" },
+                { error: authResult.message },
                 { status: 401 }
             );
         }
+
+        const userId = authResult.id;
 
         const { slug } = await params;
 
