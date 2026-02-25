@@ -3,7 +3,7 @@ import path from "path";
 dotenv.config({ path: path.join(process.cwd(), "../../.env") });
 
 import { WebSocketServer, WebSocket } from "ws";
-import { auth } from "@repo/common";
+import { auth, WsMessageSchema } from "@repo/common";
 import prisma from "@repo/db";
 
 const wss = new WebSocketServer({ port: 8080 });
@@ -78,10 +78,17 @@ wss.on("connection", (ws, req) => {
     ws.on("message", async (data) => {
         console.log("Raw Message received: ", data);
 
-        let parsedData: any;
+        let parsedData;
 
         try {
-            parsedData = JSON.parse(data.toString());
+            const jsonObject = JSON.parse(data.toString());
+            const validationResult = WsMessageSchema.safeParse(jsonObject);
+
+            if (!validationResult.success) {
+                console.error("Validation failed for incoming message:", validationResult.error.message);
+                return;
+            }
+            parsedData = validationResult.data;
         } catch (err) {
             console.error("Invalid JSON received (length): ", data.toString().length);
             return;
