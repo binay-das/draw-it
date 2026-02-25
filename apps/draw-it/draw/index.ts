@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useCanvasStore } from "../store/canvasStore";
 
 export type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow" | "text";
 
@@ -49,7 +50,7 @@ export async function initDraw(
 
     const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 
-    const shapes: Shape[] = [];
+    // shapes are now managed by Zustand store
 
     // load saved viewport state
     const savedViewport = loadViewport(slug);
@@ -74,7 +75,7 @@ export async function initDraw(
     try {
         const response = await axios.get<{ shapes: Shape[] }>(`/api/shapes/${slug}`);
         if (response.data && response.data.shapes) {
-            shapes.push(...response.data.shapes);
+            useCanvasStore.getState().setShapes(response.data.shapes);
         }
     } catch (error) {
         console.error("Error fetching existing shapes:", error);
@@ -127,13 +128,17 @@ export async function initDraw(
         }
 
         if (editingTextIndex !== null) {
-            const shape = shapes[editingTextIndex];
+            const currentShapes = [...useCanvasStore.getState().shapes];
+            const shape = currentShapes[editingTextIndex];
             if (shape) {
-                shape.text = text;
+                const newShape = { ...shape, text: text };
+                currentShapes[editingTextIndex] = newShape;
+                useCanvasStore.getState().setShapes(currentShapes);
+
                 socket.send(JSON.stringify({
                     type: "chat",
                     roomSlug: slug,
-                    message: shape
+                    message: newShape
                 }));
             }
         } else {
@@ -151,7 +156,7 @@ export async function initDraw(
                 text
             };
 
-            shapes.push(textShape);
+            useCanvasStore.getState().addShape(textShape);
             socket.send(JSON.stringify({
                 type: "chat",
                 roomSlug: slug,
@@ -270,7 +275,7 @@ export async function initDraw(
 
         context.strokeStyle = "#000000";
         context.lineWidth = 2 / scale;
-        shapes.forEach(drawShape);
+        useCanvasStore.getState().shapes.forEach(drawShape);
     }
 
     clearCanvas();
@@ -328,7 +333,7 @@ export async function initDraw(
             height
         };
 
-        shapes.push(shape);
+        useCanvasStore.getState().addShape(shape);
         clearCanvas();
 
         socket.send(JSON.stringify({
@@ -401,10 +406,16 @@ export async function initDraw(
         const data = JSON.parse(event.data);
 
         if (data.type === "chat" && data.roomSlug === slug) {
-            shapes.push(data.message);
+            useCanvasStore.getState().addShape(data.message);
             clearCanvas();
         }
     };
+
+    const unsubZustand = useCanvasStore.subscribe((state, prevState) => {
+        if (state.shapes !== prevState.shapes) {
+            clearCanvas();
+        }
+    });
 
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("mouseup", handleMouseUp);
@@ -413,6 +424,7 @@ export async function initDraw(
     socket.addEventListener("message", handleSocketMessage);
 
     return () => {
+        unsubZustand();
         canvas.removeEventListener("mousedown", handleMouseDown);
         canvas.removeEventListener("mouseup", handleMouseUp);
         canvas.removeEventListener("mousemove", handleMouseMove);
