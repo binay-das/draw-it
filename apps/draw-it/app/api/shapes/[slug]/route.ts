@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@repo/db";
-import { auth } from "@repo/common";
+import { auth, ShapeSchema } from "@repo/common";
 
-type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow" | "text";
-
-interface Shape {
-    type: ShapeType;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    text?: string;
-}
+// Shape types are now managed by @repo/common
 
 export async function GET(
     req: NextRequest,
@@ -60,26 +51,20 @@ export async function GET(
             }
         });
 
-        const shapes: Shape[] = chats.map((chat) => {
+        const shapes = chats.map((chat) => {
             try {
                 const parsed = JSON.parse(chat.message);
-                const shape: Shape = {
-                    type: parsed.type || "rectangle",
-                    x: parsed.x,
-                    y: parsed.y,
-                    width: parsed.width,
-                    height: parsed.height
-                };
-                // including text property if it exists
-                if (parsed.text) {
-                    shape.text = parsed.text;
+                const result = ShapeSchema.safeParse(parsed);
+                if (result.success) {
+                    return result.data;
                 }
-                return shape;
+                console.error("Shape schema validation failed:", result.error.message);
+                return null;
             } catch (error) {
-                console.error("Error parsing shape:", error);
+                console.error("Error parsing shape JSON:", error);
                 return null;
             }
-        }).filter((shape): shape is Shape => shape !== null);
+        }).filter((shape) => shape !== null);
 
         return NextResponse.json({ shapes }, { status: 200 });
     } catch (error) {
