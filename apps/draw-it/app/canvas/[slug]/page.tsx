@@ -3,7 +3,9 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useSocket } from "../../../hooks/useSocket";
 import { initDraw, ShapeType } from "../../../draw";
-import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type } from "lucide-react";
+import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo } from "lucide-react";
+import { useCanvasStore } from "../../../store/canvasStore";
+import { Button } from "@repo/ui/button";
 
 export default function Page({
     params
@@ -22,6 +24,32 @@ export default function Page({
         return "rectangle";
     });
     const shapeTypeRef = useRef<ShapeType>(selectedShape);
+
+    const undo = useCanvasStore((state) => state.undo);
+    const redo = useCanvasStore((state) => state.redo);
+    const canUndo = useCanvasStore((state) => state.historyStep > 0);
+    const canRedo = useCanvasStore((state) => state.historyStep < state.history.length - 1);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === "z") {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        redo();
+                    } else {
+                        undo();
+                    }
+                } else if (e.key === "y") {
+                    e.preventDefault();
+                    redo();
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [undo, redo]);
 
     const { socket } = useSocket();
 
@@ -93,6 +121,23 @@ export default function Page({
                             </button>
                         );
                     })}
+                    <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                    <Button
+                        onClick={undo}
+                        disabled={!canUndo}
+                        className={`p-3 rounded-md transition-all ${canUndo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
+                        title="Undo (Ctrl+Z)"
+                    >
+                        <Undo size={20} />
+                    </Button>
+                    <Button
+                        onClick={redo}
+                        disabled={!canRedo}
+                        className={`p-3 rounded-md transition-all ${canRedo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
+                        title="Redo (Ctrl+Y)"
+                    >
+                        <Redo size={20} />
+                    </Button>
                 </div>
             </div>
 
