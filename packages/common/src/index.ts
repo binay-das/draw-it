@@ -25,6 +25,31 @@ export const RoomSchema = z.object({
     slug: z.string().min(3).max(10),
 });
 
+export const ShapeSchema = z.object({
+    type: z.enum(["rectangle", "square", "circle", "line", "arrow", "text"]),
+    x: z.number(),
+    y: z.number(),
+    width: z.number(),
+    height: z.number(),
+    text: z.string().optional()
+});
+
+export const WsMessageSchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal("join"),
+        roomSlug: z.string()
+    }),
+    z.object({
+        type: z.literal("leave"),
+        roomSlug: z.string()
+    }),
+    z.object({
+        type: z.literal("chat"),
+        roomSlug: z.string(),
+        message: ShapeSchema
+    })
+]);
+
 interface AuthPayload {
     id: string;
 }
@@ -79,7 +104,7 @@ function refreshToken(expiredToken: string): string | null {
         // Issue new token
         return signToken(decoded.id);
     } catch (error) {
-        return null; 
+        return null;
     }
 }
 
