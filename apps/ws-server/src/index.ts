@@ -86,6 +86,10 @@ wss.on("connection", (ws, req) => {
 
             if (!validationResult.success) {
                 console.error("Validation failed for incoming message:", validationResult.error.message);
+                ws.send(JSON.stringify({
+                    type: "error",
+                    message: "Invalid message format: " + validationResult.error.issues.map(i => i.message).join(", ")
+                }));
                 return;
             }
             parsedData = validationResult.data;
