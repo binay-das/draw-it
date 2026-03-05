@@ -11,7 +11,7 @@ export function proxy(request: NextRequest) {
     (pathname.startsWith("/signin") ||
     pathname.startsWith("/signup"))
   ) {
-    return NextResponse.redirect(new URL("/draw", request.url));
+    return NextResponse.redirect(new URL("/canvas", request.url));
   }
 
   if (
