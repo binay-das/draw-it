@@ -171,6 +171,36 @@ wss.on("connection", (ws, req) => {
             });
         }
 
+        if (parsedData.type === "delete") {
+            const user = users.find((u) => u.userId === userId);
+            if (!user) return;
+
+            const roomSlug = parsedData.roomSlug;
+            if (!user.roomSlugs.includes(roomSlug)) return;
+
+            const messageToDelete = JSON.stringify(parsedData.message);
+
+            users.forEach((u) => {
+                if (u.roomSlugs.includes(roomSlug)) {
+                    u.ws.send(JSON.stringify({
+                        type: "delete",
+                        roomSlug,
+                        message: parsedData.message
+                    }));
+                }
+            });
+
+            const room = await prisma.room.findUnique({ where: { slug: roomSlug } });
+            if (room) {
+                await prisma.chat.deleteMany({
+                    where: {
+                        roomId: room.id,
+                        message: messageToDelete
+                    }
+                });
+            }
+        }
+
     })
 
     ws.on("close", () => {
