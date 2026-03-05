@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useSocket } from "../../../hooks/useSocket";
 import { initDraw, ShapeType } from "../../../draw";
-import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo, Eraser } from "lucide-react";
+import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo, Eraser, Hand } from "lucide-react";
 import { useCanvasStore } from "../../../store/canvasStore";
 import { Button } from "@repo/ui/button";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
@@ -25,8 +25,10 @@ export default function Page({
         return "rectangle";
     });
     const shapeTypeRef = useRef<ShapeType>(selectedShape);
-    const [isEraser, setIsEraser] = useState(false);
-    const isEraserRef = useRef(false);
+    const [isEraser, setIsEraser] = useState<boolean>(false);
+    const isEraserRef = useRef<boolean>(false);
+    const [isPanMode, setIsPanMode] = useState<boolean>(false);
+    const isPanModeRef = useRef<boolean>(false);
 
     const undo = useCanvasStore((state) => state.undo);
     const redo = useCanvasStore((state) => state.redo);
@@ -76,19 +78,25 @@ export default function Page({
 
     useEffect(() => {
         isEraserRef.current = isEraser;
-
         if (canvasRef.current) {
             canvasRef.current.style.cursor = isEraser
                 ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21'/%3E%3Cpath d='M22 21H7'/%3E%3Cpath d='m5 11 9 9'/%3E%3C/svg%3E") 4 20, auto`
-                : "default";
+                : isPanMode ? "grab" : "default";
         }
-    }, [isEraser]);
+    }, [isEraser, isPanMode]);
+
+    useEffect(() => {
+        isPanModeRef.current = isPanMode;
+        if (canvasRef.current) {
+            canvasRef.current.style.cursor = isPanMode ? "grab" : isEraser ? "auto" : "default";
+        }
+    }, [isPanMode, isEraser]);
 
     useEffect(() => {
         let cleanup: (() => void) | null = null;
 
         if (canvasRef.current && socket) {
-            initDraw(canvasRef.current, slug, socket, shapeTypeRef, isEraserRef).then((cleanupFn) => {
+            initDraw(canvasRef.current, slug, socket, shapeTypeRef, isEraserRef, isPanModeRef).then((cleanupFn) => {
                 cleanup = cleanupFn;
             });
         }
@@ -144,10 +152,10 @@ export default function Page({
                             return (
                                 <button
                                     key={shape.type}
-                                    onClick={() => { setSelectedShape(shape.type); setIsEraser(false); }}
+                                    onClick={() => { setSelectedShape(shape.type); setIsEraser(false); setIsPanMode(false); }}
                                     className={`
                                         p-3 rounded-md transition-all
-                                        ${selectedShape === shape.type && !isEraser
+                                        ${selectedShape === shape.type && !isEraser && !isPanMode
                                             ? "bg-blue-500 text-white shadow-md"
                                             : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                                         }
@@ -160,7 +168,7 @@ export default function Page({
                         })}
                         <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
                         <button
-                            onClick={() => setIsEraser((prev) => !prev)}
+                            onClick={() => { setIsEraser((prev) => !prev); setIsPanMode(false); }}
                             className={`p-3 rounded-md transition-all ${isEraser
                                 ? "bg-red-500 text-white shadow-md"
                                 : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -168,6 +176,16 @@ export default function Page({
                             title="Eraser (click shape edge to delete)"
                         >
                             <Eraser size={20} />
+                        </button>
+                        <button
+                            onClick={() => { setIsPanMode((prev) => !prev); setIsEraser(false); }}
+                            className={`p-3 rounded-md transition-all ${isPanMode
+                                ? "bg-blue-500 text-white shadow-md"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                }`}
+                            title="Pan (hold and drag to move canvas)"
+                        >
+                            <Hand size={20} />
                         </button>
                         <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
                         <Button
