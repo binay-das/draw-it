@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useCanvasStore } from "../store/canvasStore";
 
-export type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow" | "text";
+export type ShapeType = "rectangle" | "square" | "circle" | "line" | "arrow" | "text" | "pencil";
 
 interface Shape {
     type: ShapeType;
@@ -10,6 +10,7 @@ interface Shape {
     width: number;
     height: number;
     text?: string;
+    points?: { x: number; y: number }[];
 }
 
 interface ViewportState {
@@ -247,6 +248,32 @@ export async function initDraw(
                 py >= shape.y - fontSize - tol && py <= shape.y + tol;
         }
 
+        if (shape.type === "pencil" && shape.points && shape.points.length > 0) {
+            // Check distance to any line segment connecting consecutive points
+            for (let i = 0; i < shape.points.length - 1; i++) {
+                const p1 = shape.points[i];
+                const p2 = shape.points[i + 1];
+                if (!p1 || !p2) continue;
+
+                const lx1 = shape.x + p1.x, ly1 = shape.y + p1.y;
+                const lx2 = shape.x + p2.x, ly2 = shape.y + p2.y;
+                const dx = lx2 - lx1, dy = ly2 - ly1;
+                const lenSq = dx * dx + dy * dy;
+
+                let distToSegment;
+                if (lenSq === 0) {
+                    distToSegment = Math.hypot(px - lx1, py - ly1);
+                } else {
+                    const t = Math.max(0, Math.min(1, ((px - lx1) * dx + (py - ly1) * dy) / lenSq));
+                    const nearX = lx1 + t * dx, nearY = ly1 + t * dy;
+                    distToSegment = Math.hypot(px - nearX, py - nearY);
+                }
+
+                if (distToSegment <= tol) return true;
+            }
+            return false;
+        }
+
         // rectangle and square: hit on any of the 4 edges
         const left = Math.min(shape.x, shape.x + shape.width);
         const right = Math.max(shape.x, shape.x + shape.width);
@@ -325,6 +352,19 @@ export async function initDraw(
             return;
         }
 
+        if (shape.type === "pencil" && shape.points && shape.points.length > 0) {
+            const firstPoint = shape.points[0];
+            if (!firstPoint) return;
+            ctx.beginPath();
+            ctx.moveTo(shape.x + firstPoint.x, shape.y + firstPoint.y);
+            for (let i = 1; i < shape.points.length; i++) {
+                const p = shape.points[i];
+                if (p) ctx.lineTo(shape.x + p.x, shape.y + p.y);
+            }
+            ctx.stroke();
+            return;
+        }
+
         ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
     }
 
@@ -348,6 +388,9 @@ export async function initDraw(
 
 
     let rafId: number | null = null;
+    let currentPencilPoints: { x: number; y: number }[] = [];
+    let lastStreamTime = 0;
+    const STREAM_THROTTLE_MS = 50;
 
     clearCanvas();
 
@@ -383,6 +426,10 @@ export async function initDraw(
         const canvasCoords = screenToCanvas(screenX, screenY);
         startX = canvasCoords.x;
         startY = canvasCoords.y;
+
+        if (shapeTypeRef.current === "pencil") {
+            currentPencilPoints = [{ x: 0, y: 0 }];
+        }
     };
 
     const handleMouseUp = (e: MouseEvent) => {
@@ -426,11 +473,36 @@ export async function initDraw(
             x: startX,
             y: startY,
             width,
-            height
+            height,
+            ...(shapeTypeRef.current === "pencil" ? { points: currentPencilPoints } : {})
         };
+
+        if (shapeTypeRef.current === "pencil" && currentPencilPoints.length > 0) {
+
+            let minX = 0, minY = 0, maxX = 0, maxY = 0;
+            currentPencilPoints.forEach((p, i) => {
+                if (i === 0) {
+                    minX = maxX = p.x;
+                    minY = maxY = p.y;
+                } else {
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x);
+                    maxY = Math.max(maxY, p.y);
+                }
+            });
+            shape.x = startX + minX;
+            shape.y = startY + minY;
+            shape.width = maxX - minX;
+            shape.height = maxY - minY;
+
+            shape.points = currentPencilPoints.map(p => ({ x: p.x - minX, y: p.y - minY }));
+        }
 
         useCanvasStore.getState().addShape(shape);
         clearCanvas();
+
+        currentPencilPoints = [];
 
         socket.send(JSON.stringify({
             type: "chat",
@@ -480,19 +552,39 @@ export async function initDraw(
         rafId = requestAnimationFrame(() => {
             rafId = null;
 
-
+            if (shapeTypeRef.current === "pencil") {
+                currentPencilPoints.push({
+                    x: canvasCoords.x - startX,
+                    y: canvasCoords.y - startY
+                });
+            }
 
             clearActiveLayer();
             activeCtx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
             activeCtx.strokeStyle = "#000000";
             activeCtx.lineWidth = 2 / scale;
-            drawShapeOn(activeCtx, {
+
+            const activeShape: Shape = {
                 type: shapeTypeRef.current,
                 x: startX,
                 y: startY,
                 width,
-                height
-            });
+                height,
+                ...(shapeTypeRef.current === "pencil" ? { points: currentPencilPoints } : {})
+            };
+
+            drawShapeOn(activeCtx, activeShape);
+
+            // Stream real-time drawing to other users (batched/throttled)
+            const now = Date.now();
+            if (now - lastStreamTime > STREAM_THROTTLE_MS) {
+                lastStreamTime = now;
+                socket.send(JSON.stringify({
+                    type: "draw-stream",
+                    roomSlug: slug,
+                    message: activeShape
+                }));
+            }
         });
     };
 
@@ -527,7 +619,25 @@ export async function initDraw(
             return;
         }
 
+        if (data.type === "draw-stream" && data.roomSlug === slug) {
+            // If we receive a live stream from someone else, we draw it on the active layer
+            // Note: it will overwrite our own active layer if we are both drawing, 
+            // but usually this is fine for simple collaboration feedback.
+            if (!isClicked) { // Only show others' stream if we aren't currently drawing
+                clearActiveLayer();
+                activeCtx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+                activeCtx.strokeStyle = "#000000";
+                activeCtx.lineWidth = 2 / scale;
+                drawShapeOn(activeCtx, data.message);
+
+                // Set a timeout to clear it if they stop streaming but haven't sent the committed 'chat' yet
+                if (rafId !== null) cancelAnimationFrame(rafId);
+                // We'll just leave it on the active layer until clearer or overridden.
+            }
+        }
+
         if (data.type === "chat" && data.roomSlug === slug) {
+            clearActiveLayer(); // Clear any streamed active shapes when the final one arrives
             useCanvasStore.getState().addShape(data.message);
             clearCanvas();
         }

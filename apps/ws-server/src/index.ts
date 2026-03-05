@@ -170,6 +170,7 @@ wss.on("connection", (ws, req) => {
                     width: shape.width,
                     height: shape.height,
                     text: shape.text ?? null,
+                    points: shape.points ? JSON.stringify(shape.points) : null,
                     user: { connect: { id: userId } },
                     room: { connect: { slug: roomSlug } }
                 }
@@ -205,10 +206,31 @@ wss.on("connection", (ws, req) => {
                         y: shape.y,
                         width: shape.width,
                         height: shape.height,
-                        ...(shape.text !== undefined ? { text: shape.text } : {})
+                        ...(shape.text !== undefined ? { text: shape.text } : {}),
+                        ...(shape.points !== undefined ? { points: JSON.stringify(shape.points) } : {})
                     }
                 });
             }
+        }
+
+        if (parsedData.type === "draw-stream") {
+            const user = users.find((u) => u.userId === userId);
+            if (!user) return;
+
+            const roomSlug = parsedData.roomSlug;
+            if (!user.roomSlugs.includes(roomSlug)) return;
+
+            // Broadcast active drawing shape to everyone else in the room
+            // Do NOT persist to database — it's transient until mouseup
+            users.forEach((u) => {
+                if (u.ws !== ws && u.roomSlugs.includes(roomSlug)) {
+                    u.ws.send(JSON.stringify({
+                        type: "draw-stream",
+                        roomSlug,
+                        message: parsedData.message
+                    }));
+                }
+            });
         }
 
     })

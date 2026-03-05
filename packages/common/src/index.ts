@@ -26,12 +26,13 @@ export const RoomSchema = z.object({
 });
 
 export const ShapeSchema = z.object({
-    type: z.enum(["rectangle", "square", "circle", "line", "arrow", "text"]),
+    type: z.enum(["rectangle", "square", "circle", "line", "arrow", "text", "pencil"]),
     x: z.number(),
     y: z.number(),
     width: z.number(),
     height: z.number(),
-    text: z.string().optional()
+    text: z.string().optional(),
+    points: z.array(z.object({ x: z.number(), y: z.number() })).optional()
 });
 
 export const WsMessageSchema = z.discriminatedUnion("type", [
@@ -50,6 +51,11 @@ export const WsMessageSchema = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("delete"),
+        roomSlug: z.string(),
+        message: ShapeSchema
+    }),
+    z.object({
+        type: z.literal("draw-stream"),
         roomSlug: z.string(),
         message: ShapeSchema
     })

@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useSocket } from "../../../hooks/useSocket";
 import { initDraw, ShapeType } from "../../../draw";
-import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo, Eraser, Hand } from "lucide-react";
+import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo, Eraser, Hand, Pencil } from "lucide-react";
 import { useCanvasStore } from "../../../store/canvasStore";
 import { Button } from "@repo/ui/button";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
@@ -18,7 +18,7 @@ export default function Page({
     const [selectedShape, setSelectedShape] = useState<ShapeType>(() => {
         if (typeof window !== "undefined") {
             const saved = localStorage.getItem("selected-shape");
-            if (saved && ["rectangle", "square", "circle", "line", "arrow", "text"].includes(saved)) {
+            if (saved && ["rectangle", "square", "circle", "line", "arrow", "text", "pencil"].includes(saved)) {
                 return saved as ShapeType;
             }
         }
@@ -138,7 +138,8 @@ export default function Page({
         { type: "circle", label: "Circle", Icon: Circle },
         { type: "line", label: "Line", Icon: Minus },
         { type: "arrow", label: "Arrow", Icon: ArrowRight },
-        { type: "text", label: "Text", Icon: Type }
+        { type: "text", label: "Text", Icon: Type },
+        { type: "pencil", label: "Pencil", Icon: Pencil }
     ];
 
     return (
