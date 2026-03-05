@@ -6,6 +6,7 @@ import { initDraw, ShapeType } from "../../../draw";
 import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo, Eraser } from "lucide-react";
 import { useCanvasStore } from "../../../store/canvasStore";
 import { Button } from "@repo/ui/button";
+import { ErrorBoundary } from "../../components/ErrorBoundary";
 
 export default function Page({
     params
@@ -53,7 +54,7 @@ export default function Page({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [undo, redo]);
 
-    const { socket } = useSocket();
+    const { socket, error, retryCount } = useSocket();
 
     useEffect(() => {
         if (socket && slug) {
@@ -96,7 +97,30 @@ export default function Page({
     }, [slug, socket]);
 
     if (!socket) {
-        return <div className="w-full h-screen">Loading…</div>;
+        return (
+            <div className="w-full h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-900 gap-3">
+                {error ? (
+                    <>
+                        <p className="text-base font-medium text-red-500">{error}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+                        >
+                            Reload
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {retryCount > 0
+                                ? `Reconnecting… (attempt ${retryCount}/${5})`
+                                : "Connecting to canvas…"}
+                        </p>
+                    </>
+                )}
+            </div>
+        );
     }
 
     const shapes: { type: ShapeType; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
@@ -109,63 +133,66 @@ export default function Page({
     ];
 
     return (
-        <div className="w-full h-screen relative">
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 flex gap-1">
-                    {shapes.map((shape) => {
-                        const Icon = shape.Icon;
-                        return (
-                            <button
-                                key={shape.type}
-                                onClick={() => { setSelectedShape(shape.type); setIsEraser(false); }}
-                                className={`
-                                    p-3 rounded-md transition-all
-                                    ${selectedShape === shape.type && !isEraser
-                                        ? "bg-blue-500 text-white shadow-md"
-                                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                                    }
-                                `}
-                                title={shape.label}
-                            >
-                                <Icon size={20} />
-                            </button>
-                        );
-                    })}
-                    <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                    <button
-                        onClick={() => setIsEraser((prev) => !prev)}
-                        className={`p-3 rounded-md transition-all ${isEraser
+        <ErrorBoundary>
+            <div className="w-full h-screen relative">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 flex gap-1">
+                        {shapes.map((shape) => {
+                            const Icon = shape.Icon;
+                            return (
+                                <button
+                                    key={shape.type}
+                                    onClick={() => { setSelectedShape(shape.type); setIsEraser(false); }}
+                                    className={`
+                                        p-3 rounded-md transition-all
+                                        ${selectedShape === shape.type && !isEraser
+                                            ? "bg-blue-500 text-white shadow-md"
+                                            : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                        }
+                                    `}
+                                    title={shape.label}
+                                >
+                                    <Icon size={20} />
+                                </button>
+                            );
+                        })}
+                        <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                        <button
+                            onClick={() => setIsEraser((prev) => !prev)}
+                            className={`p-3 rounded-md transition-all ${isEraser
                                 ? "bg-red-500 text-white shadow-md"
                                 : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                            }`}
-                        title="Eraser (click shape edge to delete)"
-                    >
-                        <Eraser size={20} />
-                    </button>
-                    <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                    <Button
-                        onClick={undo}
-                        disabled={!canUndo}
-                        className={`p-3 rounded-md transition-all ${canUndo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
-                        title="Undo (Ctrl+Z)"
-                    >
-                        <Undo size={20} />
-                    </Button>
-                    <Button
-                        onClick={redo}
-                        disabled={!canRedo}
-                        className={`p-3 rounded-md transition-all ${canRedo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
-                        title="Redo (Ctrl+Y)"
-                    >
-                        <Redo size={20} />
-                    </Button>
+                                }`}
+                            title="Eraser (click shape edge to delete)"
+                        >
+                            <Eraser size={20} />
+                        </button>
+                        <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                        <Button
+                            onClick={undo}
+                            disabled={!canUndo}
+                            className={`p-3 rounded-md transition-all ${canUndo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
+                            title="Undo (Ctrl+Z)"
+                        >
+                            <Undo size={20} />
+                        </Button>
+                        <Button
+                            onClick={redo}
+                            disabled={!canRedo}
+                            className={`p-3 rounded-md transition-all ${canRedo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
+                            title="Redo (Ctrl+Y)"
+                        >
+                            <Redo size={20} />
+                        </Button>
+                    </div>
                 </div>
-            </div>
 
-            <canvas
-                ref={canvasRef}
-                className="w-full h-full"
-            />
-        </div>
+                <canvas
+                    ref={canvasRef}
+                    className="w-full h-full"
+                />
+            </div>
+        </ErrorBoundary>
     );
 }
+
