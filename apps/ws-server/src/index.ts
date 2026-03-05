@@ -150,27 +150,28 @@ wss.on("connection", (ws, req) => {
             const roomSlug = parsedData.roomSlug;
             if (!user.roomSlugs.includes(roomSlug)) return;
 
-            const message = JSON.stringify(parsedData.message);
+            const shape = parsedData.message;
 
             users.forEach((u) => {
                 if (u.roomSlugs.includes(roomSlug)) {
                     u.ws.send(JSON.stringify({
                         type: "chat",
                         roomSlug,
-                        message: JSON.parse(message)
+                        message: shape
                     }));
                 }
             });
 
-            await prisma.chat.create({
+            await prisma.shape.create({
                 data: {
-                    message,
-                    user: {
-                        connect: { id: userId }
-                    },
-                    room: {
-                        connect: { slug: roomSlug }
-                    }
+                    type: shape.type,
+                    x: shape.x,
+                    y: shape.y,
+                    width: shape.width,
+                    height: shape.height,
+                    text: shape.text ?? null,
+                    user: { connect: { id: userId } },
+                    room: { connect: { slug: roomSlug } }
                 }
             });
         }
@@ -182,24 +183,29 @@ wss.on("connection", (ws, req) => {
             const roomSlug = parsedData.roomSlug;
             if (!user.roomSlugs.includes(roomSlug)) return;
 
-            const messageToDelete = JSON.stringify(parsedData.message);
+            const shape = parsedData.message;
 
             users.forEach((u) => {
                 if (u.roomSlugs.includes(roomSlug)) {
                     u.ws.send(JSON.stringify({
                         type: "delete",
                         roomSlug,
-                        message: parsedData.message
+                        message: shape
                     }));
                 }
             });
 
             const room = await prisma.room.findUnique({ where: { slug: roomSlug } });
             if (room) {
-                await prisma.chat.deleteMany({
+                await prisma.shape.deleteMany({
                     where: {
                         roomId: room.id,
-                        message: messageToDelete
+                        type: shape.type,
+                        x: shape.x,
+                        y: shape.y,
+                        width: shape.width,
+                        height: shape.height,
+                        ...(shape.text !== undefined ? { text: shape.text } : {})
                     }
                 });
             }

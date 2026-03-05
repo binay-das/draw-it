@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@repo/db";
 import { auth, ShapeSchema } from "@repo/common";
 
-// Shape types are now managed by @repo/common
-
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ slug: string }> }
@@ -25,14 +23,10 @@ export async function GET(
             );
         }
 
-        const userId = authResult.id;
-
         const { slug } = await params;
 
         const room = await prisma.room.findUnique({
-            where: {
-                slug
-            }
+            where: { slug }
         });
 
         if (!room) {
@@ -42,29 +36,25 @@ export async function GET(
             );
         }
 
-        const chats = await prisma.chat.findMany({
-            where: {
-                roomId: room.id
-            },
-            orderBy: {
-                createdAt: "asc"
+        const rawShapes = await prisma.shape.findMany({
+            where: { roomId: room.id },
+            orderBy: { createdAt: "asc" },
+            select: {
+                type: true,
+                x: true,
+                y: true,
+                width: true,
+                height: true,
+                text: true
             }
         });
 
-        const shapes = chats.map((chat) => {
-            try {
-                const parsed = JSON.parse(chat.message);
-                const result = ShapeSchema.safeParse(parsed);
-                if (result.success) {
-                    return result.data;
-                }
-                console.error("Shape schema validation failed:", result.error.message);
-                return null;
-            } catch (error) {
-                console.error("Error parsing shape JSON:", error);
-                return null;
-            }
-        }).filter((shape) => shape !== null);
+        const shapes = rawShapes.map((s) => {
+            const result = ShapeSchema.safeParse(s);
+            if (result.success) return result.data;
+            console.error("Shape schema validation failed:", result.error.message);
+            return null;
+        }).filter((s) => s !== null);
 
         return NextResponse.json({ shapes }, { status: 200 });
     } catch (error) {
