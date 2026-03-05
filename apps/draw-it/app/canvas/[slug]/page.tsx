@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useSocket } from "../../../hooks/useSocket";
 import { initDraw, ShapeType } from "../../../draw";
-import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo } from "lucide-react";
+import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo, Eraser } from "lucide-react";
 import { useCanvasStore } from "../../../store/canvasStore";
 import { Button } from "@repo/ui/button";
 
@@ -24,6 +24,8 @@ export default function Page({
         return "rectangle";
     });
     const shapeTypeRef = useRef<ShapeType>(selectedShape);
+    const [isEraser, setIsEraser] = useState(false);
+    const isEraserRef = useRef(false);
 
     const undo = useCanvasStore((state) => state.undo);
     const redo = useCanvasStore((state) => state.redo);
@@ -72,10 +74,18 @@ export default function Page({
     }, [selectedShape]);
 
     useEffect(() => {
+        isEraserRef.current = isEraser;
+
+        if (canvasRef.current) {
+            canvasRef.current.style.cursor = isEraser ? "cell" : "default";
+        }
+    }, [isEraser]);
+
+    useEffect(() => {
         let cleanup: (() => void) | null = null;
 
         if (canvasRef.current && socket) {
-            initDraw(canvasRef.current, slug, socket, shapeTypeRef).then((cleanupFn) => {
+            initDraw(canvasRef.current, slug, socket, shapeTypeRef, isEraserRef).then((cleanupFn) => {
                 cleanup = cleanupFn;
             });
         }
@@ -107,10 +117,10 @@ export default function Page({
                         return (
                             <button
                                 key={shape.type}
-                                onClick={() => setSelectedShape(shape.type)}
+                                onClick={() => { setSelectedShape(shape.type); setIsEraser(false); }}
                                 className={`
                                     p-3 rounded-md transition-all
-                                    ${selectedShape === shape.type
+                                    ${selectedShape === shape.type && !isEraser
                                         ? "bg-blue-500 text-white shadow-md"
                                         : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                                     }
@@ -121,6 +131,17 @@ export default function Page({
                             </button>
                         );
                     })}
+                    <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                    <button
+                        onClick={() => setIsEraser((prev) => !prev)}
+                        className={`p-3 rounded-md transition-all ${isEraser
+                                ? "bg-red-500 text-white shadow-md"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                            }`}
+                        title="Eraser (click shape edge to delete)"
+                    >
+                        <Eraser size={20} />
+                    </button>
                     <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
                     <Button
                         onClick={undo}
