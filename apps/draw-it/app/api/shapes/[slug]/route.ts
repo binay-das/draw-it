@@ -50,8 +50,10 @@ export async function GET(
         });
 
         const shapes = rawShapes.map((s) => {
-            const result = ShapeSchema.safeParse(s);
+            const result = ShapeSchema.safeParse({ ...s, text: s.text ?? undefined });
+
             if (result.success) return result.data;
+            
             console.error("Shape schema validation failed:", result.error.message);
             return null;
         }).filter((s) => s !== null);
