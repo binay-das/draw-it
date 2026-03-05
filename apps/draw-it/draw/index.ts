@@ -381,12 +381,14 @@ export async function initDraw(
     const handleMouseUp = (e: MouseEvent) => {
         if (isPanning) {
             isPanning = false;
-            canvas.style.cursor = "default";
+            canvas.style.cursor = isEraserRef.current ? "cell" : "default";
             return;
         }
 
         if (!isClicked) return;
         isClicked = false;
+
+        if (isEraserRef.current) return;
 
         const rect = canvas.getBoundingClientRect();
         const screenX = e.clientX - rect.left;
