@@ -43,7 +43,8 @@ export async function initDraw(
     canvas: HTMLCanvasElement,
     slug: string,
     socket: WebSocket,
-    shapeTypeRef: { current: ShapeType }
+    shapeTypeRef: { current: ShapeType },
+    isEraserRef: { current: boolean }
 ) {
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
@@ -200,6 +201,69 @@ export async function initDraw(
         return { width, height };
     }
 
+    // Hit testing: returns true if (px, py) is on or near the edge of shape
+    const HIT_TOLERANCE = 5;
+    function hitTestShape(shape: Shape, px: number, py: number): boolean {
+        const tol = HIT_TOLERANCE / scale;
+
+        if (shape.type === "line" || shape.type === "arrow") {
+            // distance from point to line segment
+            const x1 = shape.x, y1 = shape.y;
+            const x2 = shape.x + shape.width, y2 = shape.y + shape.height;
+            const dx = x2 - x1, dy = y2 - y1;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) return Math.hypot(px - x1, py - y1) <= tol;
+            const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+            const nearX = x1 + t * dx, nearY = y1 + t * dy;
+            return Math.hypot(px - nearX, py - nearY) <= tol;
+        }
+
+        if (shape.type === "circle") {
+            const radius = Math.min(Math.abs(shape.width), Math.abs(shape.height)) / 2;
+            const cx = shape.x + shape.width / 2;
+            const cy = shape.y + shape.height / 2;
+            return Math.abs(Math.hypot(px - cx, py - cy) - radius) <= tol;
+        }
+
+        if (shape.type === "text") {
+            // box around text position
+            const fontSize = 16 / scale;
+            const approxWidth = (shape.text?.length ?? 0) * fontSize * 0.6;
+            return px >= shape.x - tol && px <= shape.x + approxWidth + tol &&
+                py >= shape.y - fontSize - tol && py <= shape.y + tol;
+        }
+
+        // rectangle and square: hit on any of the 4 edges
+        const left = Math.min(shape.x, shape.x + shape.width);
+        const right = Math.max(shape.x, shape.x + shape.width);
+        const top = Math.min(shape.y, shape.y + shape.height);
+        const bottom = Math.max(shape.y, shape.y + shape.height);
+        const onLeft = Math.abs(px - left) <= tol && py >= top - tol && py <= bottom + tol;
+        const onRight = Math.abs(px - right) <= tol && py >= top - tol && py <= bottom + tol;
+        const onTop = Math.abs(py - top) <= tol && px >= left - tol && px <= right + tol;
+        const onBottom = Math.abs(py - bottom) <= tol && px >= left - tol && px <= right + tol;
+        return onLeft || onRight || onTop || onBottom;
+    }
+
+    function eraseShapeAt(px: number, py: number) {
+        const currentShapes = useCanvasStore.getState().shapes;
+        // erase the topmost drawn shape first
+        for (let i = currentShapes.length - 1; i >= 0; i--) {
+            const shape = currentShapes[i];
+            if (!shape) continue;
+            if (hitTestShape(shape, px, py)) {
+                const newShapes = currentShapes.filter((_, idx) => idx !== i);
+                useCanvasStore.getState().setShapes(newShapes);
+                socket.send(JSON.stringify({
+                    type: "delete",
+                    roomSlug: slug,
+                    message: shape
+                }));
+                return; // erase one shape per call
+            }
+        }
+    }
+
     function drawShape(shape: Shape) {
         if (shape.type === "line") {
             context.beginPath();
@@ -293,6 +357,14 @@ export async function initDraw(
             return;
         }
 
+        // handle eraser tool
+        if (isEraserRef.current) {
+            const canvasCoords = screenToCanvas(screenX, screenY);
+            eraseShapeAt(canvasCoords.x, canvasCoords.y);
+            isClicked = true;
+            return;
+        }
+
         // handle text tool
         if (shapeTypeRef.current === "text") {
             const canvasCoords = screenToCanvas(screenX, screenY);
@@ -362,6 +434,13 @@ export async function initDraw(
 
         if (!isClicked) return;
 
+        // eraser drag: erase shapes as we move
+        if (isEraserRef.current) {
+            const canvasCoords = screenToCanvas(screenX, screenY);
+            eraseShapeAt(canvasCoords.x, canvasCoords.y);
+            return;
+        }
+
         const canvasCoords = screenToCanvas(screenX, screenY);
         const rawWidth = canvasCoords.x - startX;
         const rawHeight = canvasCoords.y - startY;
@@ -404,6 +483,14 @@ export async function initDraw(
 
     const handleSocketMessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
+
+        if (data.type === "delete" && data.roomSlug === slug) {
+            const deletedShape = JSON.stringify(data.message);
+            const currentShapes = useCanvasStore.getState().shapes;
+            const newShapes = currentShapes.filter(s => JSON.stringify(s) !== deletedShape);
+            useCanvasStore.getState().setShapes(newShapes);
+            return;
+        }
 
         if (data.type === "chat" && data.roomSlug === slug) {
             useCanvasStore.getState().addShape(data.message);
