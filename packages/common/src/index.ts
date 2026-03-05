@@ -47,6 +47,11 @@ export const WsMessageSchema = z.discriminatedUnion("type", [
         type: z.literal("chat"),
         roomSlug: z.string(),
         message: ShapeSchema
+    }),
+    z.object({
+        type: z.literal("delete"),
+        roomSlug: z.string(),
+        message: ShapeSchema
     })
 ]);
 
