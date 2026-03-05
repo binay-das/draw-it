@@ -51,6 +51,19 @@ export async function initDraw(
 
     const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 
+
+    const activeCanvas = document.createElement("canvas");
+    activeCanvas.width = canvas.width;
+    activeCanvas.height = canvas.height;
+    activeCanvas.style.position = "absolute";
+    activeCanvas.style.top = "0";
+    activeCanvas.style.left = "0";
+    activeCanvas.style.pointerEvents = "none"; // clicks pass through to the static canvas
+    if (canvas.parentElement) {
+        canvas.parentElement.appendChild(activeCanvas);
+    }
+    const activeCtx = activeCanvas.getContext("2d") as CanvasRenderingContext2D;
+
     // shapes are now managed by Zustand store
 
     // load saved viewport state
@@ -264,42 +277,32 @@ export async function initDraw(
         }
     }
 
-    function drawShape(shape: Shape) {
+    function drawShapeOn(ctx: CanvasRenderingContext2D, shape: Shape) {
         if (shape.type === "line") {
-            context.beginPath();
-            context.moveTo(shape.x, shape.y);
-            context.lineTo(shape.x + shape.width, shape.y + shape.height);
-            context.stroke();
+            ctx.beginPath();
+            ctx.moveTo(shape.x, shape.y);
+            ctx.lineTo(shape.x + shape.width, shape.y + shape.height);
+            ctx.stroke();
             return;
         }
 
         if (shape.type === "arrow") {
-            const startX = shape.x;
-            const startY = shape.y;
-            const endX = shape.x + shape.width;
-            const endY = shape.y + shape.height;
+            const sx = shape.x, sy = shape.y;
+            const ex = shape.x + shape.width, ey = shape.y + shape.height;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
 
-            context.beginPath();
-            context.moveTo(startX, startY);
-            context.lineTo(endX, endY);
-            context.stroke();
-
-            const angle = Math.atan2(endY - startY, endX - startX);
+            const angle = Math.atan2(ey - sy, ex - sx);
             const headLength = 15 / scale;
             const headAngle = Math.PI / 6;
-
-            context.beginPath();
-            context.moveTo(endX, endY);
-            context.lineTo(
-                endX - headLength * Math.cos(angle - headAngle),
-                endY - headLength * Math.sin(angle - headAngle)
-            );
-            context.moveTo(endX, endY);
-            context.lineTo(
-                endX - headLength * Math.cos(angle + headAngle),
-                endY - headLength * Math.sin(angle + headAngle)
-            );
-            context.stroke();
+            ctx.beginPath();
+            ctx.moveTo(ex, ey);
+            ctx.lineTo(ex - headLength * Math.cos(angle - headAngle), ey - headLength * Math.sin(angle - headAngle));
+            ctx.moveTo(ex, ey);
+            ctx.lineTo(ex - headLength * Math.cos(angle + headAngle), ey - headLength * Math.sin(angle + headAngle));
+            ctx.stroke();
             return;
         }
 
@@ -307,40 +310,43 @@ export async function initDraw(
             const radius = Math.min(Math.abs(shape.width), Math.abs(shape.height)) / 2;
             const cx = shape.x + shape.width / 2;
             const cy = shape.y + shape.height / 2;
-
-            context.beginPath();
-            context.arc(cx, cy, radius, 0, Math.PI * 2);
-            context.stroke();
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.stroke();
             return;
         }
 
         if (shape.type === "text" && shape.text) {
             const fontSize = 16 / scale;
-            context.font = `${fontSize}px Arial`;
-            context.fillStyle = "#000000";
-            context.fillText(shape.text, shape.x, shape.y);
+            ctx.font = `${fontSize}px Arial`;
+            ctx.fillStyle = "#000000";
+            ctx.fillText(shape.text, shape.x, shape.y);
             return;
         }
 
-        context.strokeRect(
-            shape.x,
-            shape.y,
-            shape.width,
-            shape.height
-        );
+        ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
     }
+
+    function drawShape(shape: Shape) { drawShapeOn(context, shape); }
 
     function clearCanvas() {
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, canvas.width, canvas.height);
-
         context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-
         context.strokeStyle = "#000000";
         context.lineWidth = 2 / scale;
         useCanvasStore.getState().shapes.forEach(drawShape);
     }
+
+
+    function clearActiveLayer() {
+        activeCtx.setTransform(1, 0, 0, 1, 0, 0);
+        activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
+    }
+
+
+    let rafId: number | null = null;
 
     clearCanvas();
 
@@ -388,6 +394,14 @@ export async function initDraw(
         if (!isClicked) return;
         isClicked = false;
 
+
+        if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+
+        clearActiveLayer();
+
+
+
+
         if (isEraserRef.current) return;
 
         const rect = canvas.getBoundingClientRect();
@@ -429,7 +443,12 @@ export async function initDraw(
             offsetY += dy;
             panStartX = screenX;
             panStartY = screenY;
-            clearCanvas();
+            // Pan redraws static layer — gate with RAF too
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                clearCanvas();
+                rafId = null;
+            });
             debouncedSaveViewport();
             return;
         }
@@ -446,20 +465,26 @@ export async function initDraw(
         const canvasCoords = screenToCanvas(screenX, screenY);
         const rawWidth = canvasCoords.x - startX;
         const rawHeight = canvasCoords.y - startY;
-
         const { width, height } = normalizeSize(rawWidth, rawHeight);
 
-        clearCanvas();
+      
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
 
-        context.strokeStyle = "#000000";
-        context.lineWidth = 2 / scale;
 
-        drawShape({
-            type: shapeTypeRef.current,
-            x: startX,
-            y: startY,
-            width,
-            height
+
+            clearActiveLayer();
+            activeCtx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+            activeCtx.strokeStyle = "#000000";
+            activeCtx.lineWidth = 2 / scale;
+            drawShapeOn(activeCtx, {
+                type: shapeTypeRef.current,
+                x: startX,
+                y: startY,
+                width,
+                height
+            });
         });
     };
 
@@ -513,7 +538,9 @@ export async function initDraw(
     socket.addEventListener("message", handleSocketMessage);
 
     return () => {
+        if (rafId !== null) cancelAnimationFrame(rafId);
         unsubZustand();
+        if (activeCanvas.parentElement) activeCanvas.parentElement.removeChild(activeCanvas);
         canvas.removeEventListener("mousedown", handleMouseDown);
         canvas.removeEventListener("mouseup", handleMouseUp);
         canvas.removeEventListener("mousemove", handleMouseMove);
