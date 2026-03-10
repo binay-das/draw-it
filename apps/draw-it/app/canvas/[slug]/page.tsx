@@ -130,7 +130,7 @@ export default function Page({
     useEffect(() => {
         let cleanup: (() => void) | null = null;
 
-        if (canvasRef.current && socket) {
+        if (canvasRef.current) {
             initDraw(canvasRef.current, slug, socket, shapeTypeRef, isEraserRef, isPanModeRef).then((cleanupFn) => {
                 cleanup = cleanupFn;
             });
@@ -218,8 +218,8 @@ export default function Page({
                     <Button
                         onClick={() => setIsSharingModalOpen(true)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all shadow-sm active:scale-95 ${isShared
-                                ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-800"
-                                : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600"
+                            ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-800"
+                            : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600"
                             }`}
                     >
                         <Share2 size={16} />
