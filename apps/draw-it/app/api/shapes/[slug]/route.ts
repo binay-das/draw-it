@@ -25,16 +25,14 @@ export async function GET(
 
         const { slug } = await params;
 
-        const room = await prisma.room.findUnique({
-            where: { slug }
+        const room = await prisma.room.upsert({
+            where: { slug },
+            update: {},
+            create: {
+                slug,
+                adminId: authResult.id
+            }
         });
-
-        if (!room) {
-            return NextResponse.json(
-                { error: "Room not found" },
-                { status: 404 }
-            );
-        }
 
         const rawShapes = await prisma.shape.findMany({
             where: { roomId: room.id },
@@ -73,5 +71,68 @@ export async function GET(
             { error: "Internal server error" },
             { status: 500 }
         );
+    }
+}
+
+export async function POST(
+    req: NextRequest,
+    { params }: { params: Promise<{ slug: string }> }
+) {
+    try {
+        const token = req.cookies.get("token")?.value;
+        if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const authResult = auth.verifyTokenSafe(token);
+        if (!authResult.valid) return NextResponse.json({ error: authResult.message }, { status: 401 });
+
+        const userId = authResult.id;
+        const { slug } = await params;
+
+        const room = await prisma.room.findUnique({ where: { slug } });
+        if (!room) return NextResponse.json({ error: "Room not found" }, { status: 404 });
+
+        const body = await req.json();
+        const { action, shape } = body;
+
+        if (!action || !shape) {
+            return NextResponse.json({ error: "Missing action or shape data" }, { status: 400 });
+        }
+
+        if (action === "add") {
+            await prisma.shape.create({
+                data: {
+                    type: shape.type,
+                    x: shape.x,
+                    y: shape.y,
+                    width: shape.width,
+                    height: shape.height,
+                    text: shape.text ?? null,
+                    points: shape.points ? JSON.stringify(shape.points) : null,
+                    user: { connect: { id: userId } },
+                    room: { connect: { id: room.id } }
+                }
+            });
+        } else if (action === "delete") {
+            await prisma.shape.deleteMany({
+                where: {
+                    roomId: room.id,
+                    type: shape.type,
+                    x: shape.x,
+                    y: shape.y,
+                    width: shape.width,
+                    height: shape.height,
+                    ...(shape.text !== undefined ? { text: shape.text } : {}),
+                    ...(shape.points !== undefined ? { points: JSON.stringify(shape.points) } : {})
+                }
+            });
+        } else {
+            return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+        }
+
+        return NextResponse.json({ success: true }, { status: 200 });
+
+    } catch (error) {
+        console.error("Error syncing shape:", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
