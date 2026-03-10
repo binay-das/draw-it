@@ -11,80 +11,115 @@ export interface Shape {
     text?: string;
 }
 
-interface CanvasState {
+interface RoomCanvasState {
     shapes: Shape[];
     history: Shape[][];
     historyStep: number;
+}
 
-    // Actions
-    addShape: (shape: Shape) => void;
-    setShapes: (shapes: Shape[]) => void;
-    undo: () => void;
-    redo: () => void;
-    clear: () => void;
+interface CanvasState {
+    rooms: Record<string, RoomCanvasState>;
+
+    addShape: (slug: string, shape: Shape) => void;
+    setShapes: (slug: string, shapes: Shape[]) => void;
+    undo: (slug: string) => void;
+    redo: (slug: string) => void;
+    clear: (slug: string) => void;
 }
 
 export const useCanvasStore = create<CanvasState>()(
     persist(
         (set, get) => ({
-            shapes: [],
-            history: [[]],
-            historyStep: 0,
+            rooms: {},
 
-            addShape: (shape: Shape) => {
-                const { shapes, history, historyStep } = get();
-                const newShapes = [...shapes, shape];
+            addShape: (slug: string, shape: Shape) => {
+                const { rooms } = get();
+                const roomState = rooms[slug] || { shapes: [], history: [[]], historyStep: 0 };
+                const newShapes = [...roomState.shapes, shape];
 
-                const newHistory = history.slice(0, historyStep + 1);
+                const newHistory = roomState.history.slice(0, roomState.historyStep + 1);
                 newHistory.push(newShapes);
 
                 set({
-                    shapes: newShapes,
-                    history: newHistory,
-                    historyStep: newHistory.length - 1
+                    rooms: {
+                        ...rooms,
+                        [slug]: {
+                            shapes: newShapes,
+                            history: newHistory,
+                            historyStep: newHistory.length - 1
+                        }
+                    }
                 });
             },
 
-            setShapes: (shapes: Shape[]) => {
+            setShapes: (slug: string, shapes: Shape[]) => {
+                const { rooms } = get();
                 set({
-                    shapes,
-                    history: [shapes],
-                    historyStep: 0
+                    rooms: {
+                        ...rooms,
+                        [slug]: {
+                            shapes,
+                            history: [shapes],
+                            historyStep: 0
+                        }
+                    }
                 });
             },
 
-            undo: () => {
-                const { history, historyStep } = get();
-                if (historyStep > 0) {
-                    const newStep = historyStep - 1;
+            undo: (slug: string) => {
+                const { rooms } = get();
+                const roomState = rooms[slug];
+                if (roomState && roomState.historyStep > 0) {
+                    const newStep = roomState.historyStep - 1;
+                    const restoredShapes = roomState.history[newStep] || [];
                     set({
-                        shapes: history[newStep],
-                        historyStep: newStep
+                        rooms: {
+                            ...rooms,
+                            [slug]: {
+                                shapes: restoredShapes,
+                                history: roomState.history,
+                                historyStep: newStep
+                            }
+                        }
                     });
                 }
             },
 
-            redo: () => {
-                const { history, historyStep } = get();
-                if (historyStep < history.length - 1) {
-                    const newStep = historyStep + 1;
+            redo: (slug: string) => {
+                const { rooms } = get();
+                const roomState = rooms[slug];
+                if (roomState && roomState.historyStep < roomState.history.length - 1) {
+                    const newStep = roomState.historyStep + 1;
+                    const restoredShapes = roomState.history[newStep] || [];
                     set({
-                        shapes: history[newStep],
-                        historyStep: newStep
+                        rooms: {
+                            ...rooms,
+                            [slug]: {
+                                shapes: restoredShapes,
+                                history: roomState.history,
+                                historyStep: newStep
+                            }
+                        }
                     });
                 }
             },
 
-            clear: () => {
+            clear: (slug: string) => {
+                const { rooms } = get();
                 set({
-                    shapes: [],
-                    history: [[]],
-                    historyStep: 0
+                    rooms: {
+                        ...rooms,
+                        [slug]: {
+                            shapes: [],
+                            history: [[]],
+                            historyStep: 0
+                        }
+                    }
                 });
             }
         }),
         {
-            name: "canvas-draw-it", 
+            name: "canvas-draw-it",
         }
     )
 );
