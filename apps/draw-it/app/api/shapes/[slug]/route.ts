@@ -45,20 +45,28 @@ export async function GET(
                 y: true,
                 width: true,
                 height: true,
-                text: true
+                text: true,
+                points: true
             }
         });
 
         const shapes = rawShapes.map((s) => {
-            const result = ShapeSchema.safeParse({ ...s, text: s.text ?? undefined });
+            let parsedPoints;
+            try {
+                parsedPoints = s.points ? JSON.parse(s.points) : undefined;
+            } catch (e) {
+                console.error("Failed to parse points JSON:", s.points);
+            }
+
+            const result = ShapeSchema.safeParse({ ...s, text: s.text ?? undefined, points: parsedPoints });
 
             if (result.success) return result.data;
-            
+
             console.error("Shape schema validation failed:", result.error.message);
             return null;
         }).filter((s) => s !== null);
 
-        return NextResponse.json({ shapes }, { status: 200 });
+        return NextResponse.json({ shapes, isShared: room.isShared }, { status: 200 });
     } catch (error) {
         console.error("Error fetching shapes:", error);
         return NextResponse.json(
