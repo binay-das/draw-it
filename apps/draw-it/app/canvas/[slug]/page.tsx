@@ -5,10 +5,11 @@ import { useSocket } from "../../../hooks/useSocket";
 import { initDraw, ShapeType } from "../../../draw";
 import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Redo, Eraser, Hand, Pencil } from "lucide-react";
 import { useCanvasStore } from "../../../store/canvasStore";
-import { Button } from "@repo/ui/button";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import axios from "axios";
-import { Share2, X as XIcon, Loader2 } from "lucide-react";
+import { Share2, X as XIcon, Loader2, Menu, Clock } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@repo/ui/button";
 
 export default function Page({
     params
@@ -36,6 +37,10 @@ export default function Page({
     const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
     const [isTogglingShare, setIsTogglingShare] = useState(false);
     const [isLoadingInitialState, setIsLoadingInitialState] = useState(true);
+
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [userRooms, setUserRooms] = useState<{ id: string, slug: string, updatedAt: string }[]>([]);
+    const [isLoadingRooms, setIsLoadingRooms] = useState(false);
 
     const undo = useCanvasStore((state) => state.undo);
     const redo = useCanvasStore((state) => state.redo);
@@ -91,7 +96,6 @@ export default function Page({
             });
     }, [slug]);
 
-    // 2. Conditionally connect socket only if shared
     const { socket, error, retryCount } = useSocket(!isLoadingInitialState && isShared);
 
     useEffect(() => {
@@ -164,6 +168,26 @@ export default function Page({
         }
     };
 
+    const fetchUserRooms = async () => {
+        setIsLoadingRooms(true);
+        try {
+            const res = await axios.get("/api/user/rooms");
+            if (res.data && res.data.rooms) {
+                setUserRooms(res.data.rooms);
+            }
+        } catch (error) {
+            console.error("Failed to load user rooms", error);
+        } finally {
+            setIsLoadingRooms(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isSidebarOpen && userRooms.length === 0) {
+            fetchUserRooms();
+        }
+    }, [isSidebarOpen]);
+
     if (isLoadingInitialState) {
         return (
             <div className="w-full h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-900 gap-3">
@@ -214,6 +238,82 @@ export default function Page({
     return (
         <ErrorBoundary>
             <div className="relative w-full h-screen overflow-hidden bg-white dark:bg-gray-900">
+
+
+                <div className="absolute top-4 left-4 z-20">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                        title="Open Rooms Menu"
+                    >
+                        <Menu size={20} />
+                    </Button>
+                </div>
+
+
+                {isSidebarOpen && (
+                    <div
+                        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity"
+                        onClick={() => setIsSidebarOpen(false)}
+                    />
+                )}
+
+
+                <div
+                    className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+                        }`}
+                >
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Clock size={18} className="text-blue-500" />
+                            Recent Rooms
+                        </h2>
+                        <button
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                        >
+                            <XIcon size={18} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-3">
+                        {isLoadingRooms ? (
+                            <div className="flex justify-center p-8">
+                                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                            </div>
+                        ) : userRooms.length === 0 ? (
+                            <div className="text-center p-8 text-sm text-gray-500 dark:text-gray-400">
+                                You haven't created any rooms yet.
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {userRooms.map((room) => (
+                                    <Link
+                                        key={room.id}
+                                        href={`/canvas/${room.slug}`}
+                                        onClick={() => setIsSidebarOpen(false)}
+                                    >
+                                        <div className={`p-3 rounded-lg border transition-all ${room.slug === slug
+                                            ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
+                                            : "bg-white border-gray-100 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600 shadow-sm hover:shadow"
+                                            }`}>
+                                            <p className={`font-medium truncate ${room.slug === slug ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-200"
+                                                }`}>
+                                                {room.slug}
+                                                {room.slug === slug && <span className="ml-2 text-[10px] uppercase font-bold text-blue-500 tracking-wider">Current</span>}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1.5">
+                                                Last edited: {new Date(room.updatedAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <div className="absolute top-4 right-4 z-10 flex items-center gap-3 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
                     <Button
                         onClick={() => setIsSharingModalOpen(true)}
