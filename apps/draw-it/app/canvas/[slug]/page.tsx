@@ -7,6 +7,8 @@ import { Square, Circle, RectangleHorizontal, Minus, ArrowRight, Type, Undo, Red
 import { useCanvasStore } from "../../../store/canvasStore";
 import { Button } from "@repo/ui/button";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
+import axios from "axios";
+import { Share2, X as XIcon, Loader2 } from "lucide-react";
 
 export default function Page({
     params
@@ -30,10 +32,25 @@ export default function Page({
     const [isPanMode, setIsPanMode] = useState<boolean>(false);
     const isPanModeRef = useRef<boolean>(false);
 
+    const [isShared, setIsShared] = useState<boolean>(false);
+    const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
+    const [isTogglingShare, setIsTogglingShare] = useState(false);
+    const [isLoadingInitialState, setIsLoadingInitialState] = useState(true);
+
     const undo = useCanvasStore((state) => state.undo);
     const redo = useCanvasStore((state) => state.redo);
-    const canUndo = useCanvasStore((state) => state.historyStep > 0);
-    const canRedo = useCanvasStore((state) => state.historyStep < state.history.length - 1);
+
+    const canUndo = useCanvasStore((state) => {
+        if (!slug) return false;
+        const room = state.rooms[slug as string];
+        return room ? room.historyStep > 0 : false;
+    });
+
+    const canRedo = useCanvasStore((state) => {
+        if (!slug) return false;
+        const room = state.rooms[slug as string];
+        return room ? room.historyStep < room.history.length - 1 : false;
+    });
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,22 +58,41 @@ export default function Page({
                 if (e.key === "z") {
                     e.preventDefault();
                     if (e.shiftKey) {
-                        redo();
+                        redo(slug as string);
                     } else {
-                        undo();
+                        undo(slug as string);
                     }
                 } else if (e.key === "y") {
                     e.preventDefault();
-                    redo();
+                    redo(slug as string);
                 }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [undo, redo]);
+    }, [undo, redo, slug]);
 
-    const { socket, error, retryCount } = useSocket();
+    // 1. Fetch initial sharing state and shapes if shared
+    useEffect(() => {
+        if (!slug) return;
+        setIsLoadingInitialState(true);
+        axios.get(`/api/shapes/${slug}`)
+            .then(res => {
+                if (res.data) {
+                    setIsShared(Boolean(res.data.isShared));
+                }
+            })
+            .catch(err => {
+                console.error("Failed to load room state", err);
+            })
+            .finally(() => {
+                setIsLoadingInitialState(false);
+            });
+    }, [slug]);
+
+    // 2. Conditionally connect socket only if shared
+    const { socket, error, retryCount } = useSocket(!isLoadingInitialState && isShared);
 
     useEffect(() => {
         if (socket && slug) {
@@ -103,9 +139,42 @@ export default function Page({
         return () => {
             if (cleanup) cleanup();
         };
-    }, [slug, socket]);
+    }, [slug, socket, isLoadingInitialState]);
 
-    if (!socket) {
+    const toggleSharing = async () => {
+        setIsTogglingShare(true);
+        try {
+            const newState = !isShared;
+            const currentShapes = useCanvasStore.getState().rooms[slug as string]?.shapes || [];
+
+            const res = await axios.post(`/api/room/${slug}/share`, {
+                isShared: newState,
+                shapes: newState ? currentShapes : []
+            });
+
+            if (res.data.success) {
+                setIsShared(newState);
+            }
+        } catch (error) {
+            console.error("Failed to toggle sharing", error);
+            alert("Failed to toggle sharing. Are you the admin?");
+        } finally {
+            setIsTogglingShare(false);
+            setIsSharingModalOpen(false);
+        }
+    };
+
+    if (isLoadingInitialState) {
+        return (
+            <div className="w-full h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-900 gap-3">
+                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">Loading canvas...</p>
+            </div>
+        );
+    }
+
+
+    if (isShared && !socket) {
         return (
             <div className="w-full h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-900 gap-3">
                 {error ? (
@@ -144,7 +213,20 @@ export default function Page({
 
     return (
         <ErrorBoundary>
-            <div className="w-full h-screen relative">
+            <div className="relative w-full h-screen overflow-hidden bg-white dark:bg-gray-900">
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-3 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                    <Button
+                        onClick={() => setIsSharingModalOpen(true)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all shadow-sm active:scale-95 ${isShared
+                                ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-800"
+                                : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600"
+                            }`}
+                    >
+                        <Share2 size={16} />
+                        {isShared ? "Live Shared" : "Share"}
+                    </Button>
+                </div>
+
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 flex gap-1">
                         {shapes.map((shape) => {
@@ -189,7 +271,7 @@ export default function Page({
                         </button>
                         <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
                         <Button
-                            onClick={undo}
+                            onClick={() => undo(slug as string)}
                             disabled={!canUndo}
                             className={`p-3 rounded-md transition-all ${canUndo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
                             title="Undo (Ctrl+Z)"
@@ -197,7 +279,7 @@ export default function Page({
                             <Undo size={20} />
                         </Button>
                         <Button
-                            onClick={redo}
+                            onClick={() => redo(slug as string)}
                             disabled={!canRedo}
                             className={`p-3 rounded-md transition-all ${canRedo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
                             title="Redo (Ctrl+Y)"
@@ -211,6 +293,48 @@ export default function Page({
                     ref={canvasRef}
                     className="w-full h-full"
                 />
+
+                {isSharingModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-gray-200 dark:border-gray-700">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Live Collaboration</h2>
+                                <button
+                                    onClick={() => !isTogglingShare && setIsSharingModalOpen(false)}
+                                    className="p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <XIcon size={20} />
+                                </button>
+                            </div>
+
+                            <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
+                                {isShared
+                                    ? "This room is currently live. Anyone with the link can join and edit."
+                                    : "This room is local. Share it to enable real-time collaboration with others."}
+                            </p>
+
+                            <div className="flex justify-end gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsSharingModalOpen(false)}
+                                    disabled={isTogglingShare}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={toggleSharing}
+                                    disabled={isTogglingShare}
+                                    className={`${isShared ? "bg-red-500 hover:bg-red-600 focus:ring-red-500" : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"}`}
+                                >
+                                    {isTogglingShare ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : null}
+                                    {isShared ? "Stop Sharing" : "Start Sharing"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </ErrorBoundary>
     );
