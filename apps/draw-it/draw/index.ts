@@ -158,6 +158,11 @@ export async function initDraw(
                         roomSlug: slug,
                         message: newShape
                     }));
+                } else {
+                    axios.post(`/api/shapes/${slug}`, {
+                        action: "add",
+                        shape: newShape
+                    }).catch(err => console.error("Failed to save edited text shape:", err));
                 }
             }
         } else {
@@ -182,6 +187,11 @@ export async function initDraw(
                     roomSlug: slug,
                     message: textShape
                 }));
+            } else {
+                axios.post(`/api/shapes/${slug}`, {
+                    action: "add",
+                    shape: textShape
+                }).catch(err => console.error("Failed to save new text shape:", err));
             }
         }
 
@@ -307,6 +317,11 @@ export async function initDraw(
                         roomSlug: slug,
                         message: shape
                     }));
+                } else {
+                    axios.post(`/api/shapes/${slug}`, {
+                        action: "delete",
+                        shape: shape
+                    }).catch(err => console.error("Failed to delete shape:", err));
                 }
                 return; // erase one shape per call
             }
@@ -522,6 +537,11 @@ export async function initDraw(
                 roomSlug: slug,
                 message: shape
             }));
+        } else {
+            axios.post(`/api/shapes/${slug}`, {
+                action: "add",
+                shape: shape
+            }).catch(err => console.error("Failed to save new shape:", err));
         }
     };
 
@@ -638,7 +658,7 @@ export async function initDraw(
 
         if (data.type === "draw-stream" && data.roomSlug === slug) {
 
-            if (!isClicked) { 
+            if (!isClicked) {
                 clearActiveLayer();
                 activeCtx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
                 activeCtx.strokeStyle = "#000000";
