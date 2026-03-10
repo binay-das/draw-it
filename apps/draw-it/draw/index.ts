@@ -43,7 +43,7 @@ function loadViewport(slug: string): ViewportState {
 export async function initDraw(
     canvas: HTMLCanvasElement,
     slug: string,
-    socket: WebSocket,
+    socket: WebSocket | null,
     shapeTypeRef: { current: ShapeType },
     isEraserRef: { current: boolean },
     isPanModeRef: { current: boolean }
@@ -91,7 +91,7 @@ export async function initDraw(
     try {
         const response = await axios.get<{ shapes: Shape[] }>(`/api/shapes/${slug}`);
         if (response.data && response.data.shapes) {
-            useCanvasStore.getState().setShapes(response.data.shapes);
+            useCanvasStore.getState().setShapes(slug, response.data.shapes);
         }
     } catch (error) {
         console.error("Error fetching existing shapes:", error);
@@ -144,18 +144,21 @@ export async function initDraw(
         }
 
         if (editingTextIndex !== null) {
-            const currentShapes = [...useCanvasStore.getState().shapes];
+            const currentRoomState = useCanvasStore.getState().rooms[slug];
+            const currentShapes = currentRoomState ? [...currentRoomState.shapes] : [];
             const shape = currentShapes[editingTextIndex];
             if (shape) {
                 const newShape = { ...shape, text: text };
                 currentShapes[editingTextIndex] = newShape;
-                useCanvasStore.getState().setShapes(currentShapes);
+                useCanvasStore.getState().setShapes(slug, currentShapes);
 
-                socket.send(JSON.stringify({
-                    type: "chat",
-                    roomSlug: slug,
-                    message: newShape
-                }));
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: "chat",
+                        roomSlug: slug,
+                        message: newShape
+                    }));
+                }
             }
         } else {
             const canvasCoords = screenToCanvas(
@@ -172,12 +175,14 @@ export async function initDraw(
                 text
             };
 
-            useCanvasStore.getState().addShape(textShape);
-            socket.send(JSON.stringify({
-                type: "chat",
-                roomSlug: slug,
-                message: textShape
-            }));
+            useCanvasStore.getState().addShape(slug, textShape);
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: "chat",
+                    roomSlug: slug,
+                    message: textShape
+                }));
+            }
         }
 
         clearCanvas();
@@ -287,19 +292,22 @@ export async function initDraw(
     }
 
     function eraseShapeAt(px: number, py: number) {
-        const currentShapes = useCanvasStore.getState().shapes;
+        const currentRoomState = useCanvasStore.getState().rooms[slug];
+        const currentShapes = currentRoomState ? currentRoomState.shapes : [];
         // erase the topmost drawn shape first
         for (let i = currentShapes.length - 1; i >= 0; i--) {
             const shape = currentShapes[i];
             if (!shape) continue;
             if (hitTestShape(shape, px, py)) {
                 const newShapes = currentShapes.filter((_, idx) => idx !== i);
-                useCanvasStore.getState().setShapes(newShapes);
-                socket.send(JSON.stringify({
-                    type: "delete",
-                    roomSlug: slug,
-                    message: shape
-                }));
+                useCanvasStore.getState().setShapes(slug, newShapes);
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: "delete",
+                        roomSlug: slug,
+                        message: shape
+                    }));
+                }
                 return; // erase one shape per call
             }
         }
@@ -377,7 +385,11 @@ export async function initDraw(
         context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
         context.strokeStyle = "#000000";
         context.lineWidth = 2 / scale;
-        useCanvasStore.getState().shapes.forEach(drawShape);
+
+        const currentRoomState = useCanvasStore.getState().rooms[slug];
+        if (currentRoomState && currentRoomState.shapes) {
+            currentRoomState.shapes.forEach(drawShape);
+        }
     }
 
 
@@ -499,16 +511,18 @@ export async function initDraw(
             shape.points = currentPencilPoints.map(p => ({ x: p.x - minX, y: p.y - minY }));
         }
 
-        useCanvasStore.getState().addShape(shape);
+        useCanvasStore.getState().addShape(slug, shape);
         clearCanvas();
 
         currentPencilPoints = [];
 
-        socket.send(JSON.stringify({
-            type: "chat",
-            roomSlug: slug,
-            message: shape
-        }));
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: "chat",
+                roomSlug: slug,
+                message: shape
+            }));
+        }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -579,11 +593,13 @@ export async function initDraw(
             const now = Date.now();
             if (now - lastStreamTime > STREAM_THROTTLE_MS) {
                 lastStreamTime = now;
-                socket.send(JSON.stringify({
-                    type: "draw-stream",
-                    roomSlug: slug,
-                    message: activeShape
-                }));
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: "draw-stream",
+                        roomSlug: slug,
+                        message: activeShape
+                    }));
+                }
             }
         });
     };
@@ -613,17 +629,16 @@ export async function initDraw(
 
         if (data.type === "delete" && data.roomSlug === slug) {
             const deletedShape = JSON.stringify(data.message);
-            const currentShapes = useCanvasStore.getState().shapes;
+            const currentRoomState = useCanvasStore.getState().rooms[slug];
+            const currentShapes = currentRoomState ? currentRoomState.shapes : [];
             const newShapes = currentShapes.filter(s => JSON.stringify(s) !== deletedShape);
-            useCanvasStore.getState().setShapes(newShapes);
+            useCanvasStore.getState().setShapes(slug, newShapes);
             return;
         }
 
         if (data.type === "draw-stream" && data.roomSlug === slug) {
-            // If we receive a live stream from someone else, we draw it on the active layer
-            // Note: it will overwrite our own active layer if we are both drawing, 
-            // but usually this is fine for simple collaboration feedback.
-            if (!isClicked) { // Only show others' stream if we aren't currently drawing
+
+            if (!isClicked) { 
                 clearActiveLayer();
                 activeCtx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
                 activeCtx.strokeStyle = "#000000";
@@ -632,19 +647,19 @@ export async function initDraw(
 
                 // Set a timeout to clear it if they stop streaming but haven't sent the committed 'chat' yet
                 if (rafId !== null) cancelAnimationFrame(rafId);
-                // We'll just leave it on the active layer until clearer or overridden.
+
             }
         }
 
         if (data.type === "chat" && data.roomSlug === slug) {
             clearActiveLayer(); // Clear any streamed active shapes when the final one arrives
-            useCanvasStore.getState().addShape(data.message);
+            useCanvasStore.getState().addShape(slug, data.message);
             clearCanvas();
         }
     };
 
     const unsubZustand = useCanvasStore.subscribe((state, prevState) => {
-        if (state.shapes !== prevState.shapes) {
+        if (state.rooms[slug]?.shapes !== prevState.rooms[slug]?.shapes) {
             clearCanvas();
         }
     });
@@ -653,7 +668,9 @@ export async function initDraw(
     canvas.addEventListener("mouseup", handleMouseUp);
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("wheel", handleWheel, { passive: false });
-    socket.addEventListener("message", handleSocketMessage);
+    if (socket) {
+        socket.addEventListener("message", handleSocketMessage);
+    }
 
     return () => {
         if (rafId !== null) cancelAnimationFrame(rafId);
@@ -663,6 +680,8 @@ export async function initDraw(
         canvas.removeEventListener("mouseup", handleMouseUp);
         canvas.removeEventListener("mousemove", handleMouseMove);
         canvas.removeEventListener("wheel", handleWheel);
-        socket.removeEventListener("message", handleSocketMessage);
+        if (socket) {
+            socket.removeEventListener("message", handleSocketMessage);
+        }
     };
 }
