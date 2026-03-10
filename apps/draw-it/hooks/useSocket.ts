@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
 
-export function useSocket() {
+export function useSocket(enabled: boolean = true) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -12,6 +12,10 @@ export function useSocket() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setSocket(null);
+      return;
+    }
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
     if (!wsUrl) {
       setError("WebSocket URL is not configured.");
@@ -65,7 +69,7 @@ export function useSocket() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       ws?.close();
     };
-  }, []);
+  }, [enabled]);
 
   return { socket, error, retryCount };
 }
