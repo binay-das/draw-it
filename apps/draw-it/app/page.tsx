@@ -1,8 +1,44 @@
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
 import { Github } from "lucide-react";
+import { cookies } from "next/headers";
+import { auth } from "@repo/common";
+import prisma from "@repo/db";
 
-export default function Home() {
+async function getUser() {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+
+    if (!token) return null;
+
+    const result = auth.verifyTokenSafe(token);
+    if (!result.valid) return null;
+
+    const user = await prisma.user.findUnique({
+        where: {
+            id: result.id
+        },
+        select: {
+            id: true,
+            name: true,
+            email: true
+        }
+    });
+
+    return user;
+}
+
+function getInitials(name: string): string {
+    return name     
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+}
+
+export default async function Home() {
+    const user = await getUser();
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-[#f0f0f0] selection:text-black">
             <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl">
@@ -28,18 +64,26 @@ export default function Home() {
                             draw it
                         </span>
                     </Link>
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/signin"
-                            className="text-sm text-white/50 transition-colors hover:text-white"
-                        >
-                            Sign in
-                        </Link>
+                    <div className="flex items-center gap-3">
                         <Link href="/canvas">
                             <Button className="h-9 rounded-full bg-white px-5 text-xs font-medium text-black transition-transform hover:scale-105 active:scale-95">
                                 Start drawing
                             </Button>
                         </Link>
+                        {user ? (
+                            // <Link href="/">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-medium text-white ring-1 ring-white/20 hover:bg-white/20 transition-colors">
+                                    {getInitials(user.name || "U")}
+                                </div>
+                            // </Link>
+                        ) : (
+                            <Link
+                                href="/signin"
+                                className="text-sm text-white/50 transition-colors hover:text-white"
+                            >
+                                Sign in
+                            </Link>
+                        )}
                     </div>
                 </nav>
             </header>
