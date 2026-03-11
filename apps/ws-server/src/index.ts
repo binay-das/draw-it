@@ -153,7 +153,7 @@ wss.on("connection", (ws, req) => {
             const shape = parsedData.message;
 
             users.forEach((u) => {
-                if (u.roomSlugs.includes(roomSlug)) {
+                if (u.ws !== ws && u.roomSlugs.includes(roomSlug)) {
                     u.ws.send(JSON.stringify({
                         type: "chat",
                         roomSlug,
@@ -187,7 +187,7 @@ wss.on("connection", (ws, req) => {
             const shape = parsedData.message;
 
             users.forEach((u) => {
-                if (u.roomSlugs.includes(roomSlug)) {
+                if (u.ws !== ws && u.roomSlugs.includes(roomSlug)) {
                     u.ws.send(JSON.stringify({
                         type: "delete",
                         roomSlug,
