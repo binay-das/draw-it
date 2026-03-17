@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { Plus, Clock, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { CreateRoomModal } from "../components/CreateRoomModal";
 
 async function getUser() {
     const cookieStore = await cookies();
@@ -37,12 +38,12 @@ export default async function DashboardPage() {
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors">Your Canvas Rooms</h1>
                         <p className="text-gray-500 dark:text-gray-400 transition-colors">Manage and jump back into your recent drawings.</p>
                     </div>
-                    <Link href="/canvas">
+                    <CreateRoomModal>
                         <Button className="h-11 px-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
                             <Plus size={18} />
                             Create / Join Room
                         </Button>
-                    </Link>
+                    </CreateRoomModal>
                 </div>
 
                 {rooms.length === 0 ? (
@@ -52,11 +53,11 @@ export default async function DashboardPage() {
                         </div>
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 transition-colors">No rooms found</h2>
                         <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-8 transition-colors">You haven't created or joined any rooms yet. Start your first drawing session now.</p>
-                        <Link href="/canvas">
+                        <CreateRoomModal>
                             <Button className="h-10 px-6 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-black/90 dark:hover:bg-white/90 transition-colors">
                                 Start drawing
                             </Button>
-                        </Link>
+                        </CreateRoomModal>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
