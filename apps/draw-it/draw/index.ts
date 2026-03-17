@@ -46,7 +46,8 @@ export async function initDraw(
     socket: WebSocket | null,
     shapeTypeRef: { current: ShapeType },
     isEraserRef: { current: boolean },
-    isPanModeRef: { current: boolean }
+    isPanModeRef: { current: boolean },
+    isDark: boolean
 ) {
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
@@ -370,7 +371,7 @@ export async function initDraw(
         if (shape.type === "text" && shape.text) {
             const fontSize = 16 / scale;
             ctx.font = `${fontSize}px Arial`;
-            ctx.fillStyle = "#000000";
+            ctx.fillStyle = isDark ? "#ffffff" : "#000000";
             ctx.fillText(shape.text, shape.x, shape.y);
             return;
         }
@@ -395,10 +396,10 @@ export async function initDraw(
 
     function clearCanvas() {
         context.setTransform(1, 0, 0, 1, 0, 0);
-        context.fillStyle = "#ffffff";
+        context.fillStyle = isDark ? "#0a0a0a" : "#ffffff";
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-        context.strokeStyle = "#000000";
+        context.strokeStyle = isDark ? "#ffffff" : "#000000";
         context.lineWidth = 2 / scale;
 
         const currentRoomState = useCanvasStore.getState().rooms[slug];
@@ -595,7 +596,7 @@ export async function initDraw(
 
             clearActiveLayer();
             activeCtx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-            activeCtx.strokeStyle = "#000000";
+            activeCtx.strokeStyle = isDark ? "#ffffff" : "#000000";
             activeCtx.lineWidth = 2 / scale;
 
             const activeShape: Shape = {
@@ -661,7 +662,7 @@ export async function initDraw(
             if (!isClicked) {
                 clearActiveLayer();
                 activeCtx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-                activeCtx.strokeStyle = "#000000";
+                activeCtx.strokeStyle = isDark ? "#ffffff" : "#000000";
                 activeCtx.lineWidth = 2 / scale;
                 drawShapeOn(activeCtx, data.message);
 

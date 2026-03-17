@@ -1,306 +1,97 @@
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
 import { Github } from "lucide-react";
-import { cookies } from "next/headers";
-import { auth } from "@repo/common";
-import prisma from "@repo/db";
-import { UserProfileModal } from "./components/UserProfileModal";
-
-async function getUser() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-
-    if (!token) return null;
-
-    const result = auth.verifyTokenSafe(token);
-    if (!result.valid) return null;
-
-    const user = await prisma.user.findUnique({
-        where: {
-            id: result.id
-        },
-        select: {
-            id: true,
-            name: true,
-            email: true
-        }
-    });
-
-    return user;
-}
-
-function getInitials(name: string): string {
-    return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-}
 
 export default async function Home() {
-    const user = await getUser();
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-[#f0f0f0] selection:text-black">
-            <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl">
-                <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-                    <Link href="/" className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white">
-                            <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="black"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <path d="M12 19l7-7 3 3-7 7-3-3z" />
-                                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-                                <path d="M2 2l7.586 7.586" />
-                            </svg>
-                        </div>
-                        <span className="text-sm font-medium tracking-tight text-white/90">
-                            draw it
-                        </span>
-                    </Link>
-                    <div className="flex items-center gap-3">
-                        <Link href="/canvas">
-                            <Button className="h-9 rounded-full bg-white px-5 text-xs font-medium text-black transition-transform hover:scale-105 active:scale-95">
-                                Start drawing
-                            </Button>
-                        </Link>
-                        {user ? (
-                            <UserProfileModal user={user} initials={getInitials(user.name || "U")} />
-                        ) : (
-                            <Link
-                                href="/signin"
-                                className="text-sm text-white/50 transition-colors hover:text-white"
-                            >
-                                Sign in
-                            </Link>
-                        )}
-                    </div>
-                </nav>
-            </header>
-
+        <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-black dark:text-white transition-colors selection:bg-black/10 dark:selection:bg-[#f0f0f0] selection:text-black dark:selection:text-black">
             <main>
                 <section className="relative pt-32 pb-20">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,255,255,0.08),transparent)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(0,0,0,0.04),transparent)] dark:bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,255,255,0.08),transparent)]" />
                     <div className="mx-auto max-w-6xl px-6">
                         <div className="mx-auto max-w-3xl text-center">
-                            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-3 py-1 text-xs text-black/60 dark:text-white/60">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                                 Free and open source
                             </div>
-                            <h1 className="mb-6 text-5xl font-semibold tracking-tight text-white/90 md:text-7xl">
-                                Sketch ideas at the speed of thought
+                            <h1 className="mb-6 text-5xl font-semibold tracking-tight text-black/90 dark:text-white/90 md:text-7xl">
+                                A simple canvas for
+                                <span className="block text-black/40 dark:text-white/40">complex ideas</span>
                             </h1>
-                            <p className="mx-auto mb-10 max-w-xl text-lg text-white/40">
-                                A minimalist whiteboard for quick diagrams, wireframes, and
-                                brainstorming.
+                            <p className="mb-10 text-lg text-black/60 dark:text-white/60">
+                                Create, collaborate, and share your ideas on an infinite
+                                canvas. Built with Next.js, WebSockets, and Canvas API.
                             </p>
-                            <div className="flex items-center justify-center gap-4">
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                                 <Link href="/canvas">
-                                    <Button className="h-12 rounded-full bg-white px-8 text-sm font-medium text-black transition-all hover:scale-105 active:scale-95">
-                                        Open whiteboard
+                                    <Button className="h-12 w-full sm:w-auto rounded-full bg-black dark:bg-white px-8 text-sm font-medium text-white dark:text-black hover:bg-black/90 dark:hover:bg-white/90 transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(0,0,0,0.3)] dark:shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]">
+                                        Open canvas
+                                        <svg
+                                            className="ml-2 h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth="2"
+                                                d="M5 12h14M12 5l7 7-7 7"
+                                            />
+                                        </svg>
                                     </Button>
                                 </Link>
-                                <a
+                                <Link
                                     href="https://github.com/binay-das/draw-it"
                                     target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 rounded-full border border-white/10 px-6 py-3 text-sm font-medium text-white/60 transition-colors hover:border-white/20 hover:text-white"
+                                    rel="noreferrer"
                                 >
-                                    <Github />
-                                    <span className="hidden sm:inline">GitHub</span>
-                                </a>
-                            </div>
-                        </div>
-
-                        <div className="mt-20 rounded-2xl border border-white/10 bg-white/[0.02] p-2">
-                            <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-[#111]">
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <svg
-                                        className="w-full h-full opacity-30"
-                                        viewBox="0 0 800 500"
-                                        fill="none"
+                                    <Button
+                                        variant="outline"
+                                        className="h-12 w-full sm:w-auto rounded-full border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-8 text-sm font-medium text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                                     >
-                                        <rect
-                                            x="100"
-                                            y="100"
-                                            width="200"
-                                            height="150"
-                                            rx="8"
-                                            stroke="white"
-                                            strokeWidth="1"
-                                            strokeDasharray="4 4"
-                                        />
-                                        <rect
-                                            x="350"
-                                            y="80"
-                                            width="180"
-                                            height="200"
-                                            rx="8"
-                                            stroke="white"
-                                            strokeWidth="1"
-                                            strokeDasharray="4 4"
-                                        />
-                                        <rect
-                                            x="580"
-                                            y="120"
-                                            width="150"
-                                            height="100"
-                                            rx="8"
-                                            stroke="white"
-                                            strokeWidth="1"
-                                            strokeDasharray="4 4"
-                                        />
-                                        <path
-                                            d="M200 280 Q300 200 400 280 T600 250"
-                                            stroke="white"
-                                            strokeWidth="2"
-                                            fill="none"
-                                        />
-                                        <circle
-                                            cx="200"
-                                            cy="380"
-                                            r="40"
-                                            stroke="white"
-                                            strokeWidth="1.5"
-                                            fill="none"
-                                        />
-                                        <path
-                                            d="M350 350 L450 420 L550 360"
-                                            stroke="white"
-                                            strokeWidth="1.5"
-                                            fill="none"
-                                        />
-                                        <rect
-                                            x="80"
-                                            y="380"
-                                            width="80"
-                                            height="8"
-                                            rx="4"
-                                            stroke="white"
-                                            strokeWidth="1"
-                                        />
-                                        <rect
-                                            x="80"
-                                            y="400"
-                                            width="60"
-                                            height="8"
-                                            rx="4"
-                                            stroke="white"
-                                            strokeWidth="1"
-                                        />
-                                        <rect
-                                            x="620"
-                                            y="350"
-                                            width="100"
-                                            height="8"
-                                            rx="4"
-                                            stroke="white"
-                                            strokeWidth="1"
-                                        />
-                                        <rect
-                                            x="620"
-                                            y="370"
-                                            width="80"
-                                            height="8"
-                                            rx="4"
-                                            stroke="white"
-                                            strokeWidth="1"
-                                        />
-                                        <path
-                                            d="M50 50 L750 450"
-                                            stroke="white"
-                                            strokeWidth="0.5"
-                                            opacity="0.3"
-                                        />
-                                    </svg>
-                                </div>
-                                <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
-                                    <div className="flex gap-1.5">
-                                        <div className="h-3 w-3 rounded-full bg-red-500/80" />
-                                        <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                                        <div className="h-3 w-3 rounded-full bg-green-500/80" />
-                                    </div>
-                                    <div className="flex-1 text-center">
-                                        <span className="text-xs text-white/40">
-                                            Untitled Canvas
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 rounded-lg border border-white/10 bg-black/60 p-2 backdrop-blur">
-                                    <ToolIcon icon="select" />
-                                    <ToolIcon icon="pencil" active />
-                                    <ToolIcon icon="rectangle" />
-                                    <ToolIcon icon="ellipse" />
-                                    <ToolIcon icon="line" />
-                                    <ToolIcon icon="text" />
-                                </div>
+                                        <Github className="mr-2 h-4 w-4" />
+                                        Star on GitHub
+                                    </Button>
+                                </Link>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <section className="border-t border-white/5 py-20">
+                <section className="border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] py-24">
                     <div className="mx-auto max-w-6xl px-6">
-                        <div className="grid gap-8 md:grid-cols-3">
-                            <FeatureCard
-                                icon="cursor"
-                                title="Lightning fast"
-                                description="Open the canvas instantly. No loading screens, no sign-up walls. Just pure creative flow."
-                            />
-                            <FeatureCard
-                                icon="share"
-                                title="Share instantly"
-                                description="Generate a link and share your canvas with anyone. Collaborate in real-time."
-                            />
-                            <FeatureCard
-                                icon="download"
-                                title="Export anywhere"
-                                description="Download your work as SVG or PNG. Vector-perfect at any resolution."
-                            />
+                        <div className="grid gap-12 md:grid-cols-3">
+                            {features.map((feature, i) => (
+                                <div key={i} className="group relative">
+                                    <div className="absolute -inset-4 rounded-2xl bg-black/5 dark:bg-white/5 opacity-0 transition-opacity group-hover:opacity-100" />
+                                    <div className="relative">
+                                        <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#1a1a1a]">
+                                            {feature.icon}
+                                        </div>
+                                        <h3 className="mb-2 text-lg font-medium text-black/90 dark:text-white/90">
+                                            {feature.title}
+                                        </h3>
+                                        <p className="text-sm text-black/60 dark:text-white/60">
+                                            {feature.description}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    </div>
-                </section>
-
-                <section className="border-t border-white/5 py-24 text-center">
-                    <div className="mx-auto max-w-6xl px-6">
-                        <h2 className="mb-4 text-3xl font-semibold tracking-tight text-white/90">
-                            Ready to sketch?
-                        </h2>
-                        <p className="mb-8 text-white/40">
-                            Join thousands of designers who use draw it daily.
-                        </p>
-                        <Link href="/canvas">
-                            <Button className="h-12 rounded-full bg-white px-8 text-sm font-medium text-black transition-all hover:scale-105 active:scale-95">
-                                Start drawing now
-                            </Button>
-                        </Link>
                     </div>
                 </section>
             </main>
 
-            <footer className="border-t border-white/5 py-8">
-                <div className="mx-auto max-w-6xl px-6 flex items-center justify-between">
-                    <p className="text-sm text-white/30">© 2026 draw it. Open source.</p>
-                    <div className="flex gap-6">
-                        <a
-                            href="#"
-                            className="text-sm text-white/30 transition-colors hover:text-white/60"
-                        >
-                            Privacy
-                        </a>
-                        <a
-                            href="#"
-                            className="text-sm text-white/30 transition-colors hover:text-white/60"
-                        >
-                            Terms
-                        </a>
+            <footer className="border-t border-black/5 dark:border-white/5 py-12">
+                <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
+                    <p className="text-sm text-black/40 dark:text-white/40">
+                        Built for speed and collaboration.
+                    </p>
+                    <div className="flex gap-6 text-sm text-black/40 dark:text-white/40">
+                        <Link href="https://github.com/binay-das/draw-it" className="hover:text-black dark:hover:text-white transition-colors">
+                            Built by Binay
+                        </Link>
                     </div>
                 </div>
             </footer>
@@ -308,119 +99,32 @@ export default async function Home() {
     );
 }
 
-function ToolIcon({
-    icon,
-    active = false,
-}: {
-    icon: string;
-    active?: boolean;
-}) {
-    const icons: Record<string, React.ReactNode> = {
-        select: (
-            <path
-                d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"
-                strokeWidth="1.5"
-                fill="none"
-            />
-        ),
-        pencil: (
-            <path
-                d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
-                strokeWidth="1.5"
-                fill="none"
-            />
-        ),
-        rectangle: (
-            <rect
-                x="3"
-                y="3"
-                width="18"
-                height="18"
-                rx="2"
-                strokeWidth="1.5"
-                fill="none"
-            />
-        ),
-        ellipse: (
-            <ellipse cx="12" cy="12" rx="9" ry="6" strokeWidth="1.5" fill="none" />
-        ),
-        line: <line x1="5" y1="19" x2="19" y2="5" strokeWidth="1.5" />,
-        text: (
-            <>
-                <path d="M4 7V4h16v3" strokeWidth="1.5" fill="none" />
-                <path d="M12 4v16" strokeWidth="1.5" />
-                <path d="M8 20h8" strokeWidth="1.5" />
-            </>
-        ),
-    };
-
-    return (
-        <button
-            className={`p-1.5 rounded transition-colors ${active ? "bg-white/20 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/10"}`}
-        >
-            <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                {icons[icon]}
+const features = [
+    {
+        title: "Real-time Collaboration",
+        description: "Draw together with others in real-time. Changes sync instantly across all clients.",
+        icon: (
+            <svg className="h-5 w-5 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-        </button>
-    );
-}
-
-function FeatureCard({
-    icon,
-    title,
-    description,
-}: {
-    icon: string;
-    title: string;
-    description: string;
-}) {
-    const icons: Record<string, React.ReactNode> = {
-        cursor: (
-            <path
-                d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"
-                strokeWidth="1.5"
-                fill="none"
-            />
         ),
-        share: (
-            <path
-                d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"
-                strokeWidth="1.5"
-                fill="none"
-            />
+    },
+    {
+        title: "Fast & Smooth",
+        description: "Built on HTML5 Canvas and engineered for performance with zero lag.",
+        icon: (
+            <svg className="h-5 w-5 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
         ),
-        download: (
-            <path
-                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"
-                strokeWidth="1.5"
-                fill="none"
-            />
+    },
+    {
+        title: "Local State",
+        description: "Your drawings are saved locally so you never lose your work when offline.",
+        icon: (
+            <svg className="h-5 w-5 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
         ),
-    };
-
-    return (
-        <div className="group rounded-2xl border border-white/5 bg-white/[0.02] p-6 transition-all hover:border-white/10 hover:bg-white/[0.04]">
-            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white text-black transition-transform group-hover:scale-110">
-                <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    {icons[icon]}
-                </svg>
-            </div>
-            <h3 className="mb-2 text-lg font-medium text-white/90">{title}</h3>
-            <p className="text-sm text-white/40 leading-relaxed">{description}</p>
-        </div>
-    );
-}
+    },
+];

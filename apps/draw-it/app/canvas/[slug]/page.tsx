@@ -10,6 +10,7 @@ import axios from "axios";
 import { Share2, X as XIcon, Loader2, Menu, Clock } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
+import { useTheme } from "next-themes";
 
 export default function Page({
     params
@@ -41,6 +42,7 @@ export default function Page({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [userRooms, setUserRooms] = useState<{ id: string, slug: string, updatedAt: string }[]>([]);
     const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+    const { resolvedTheme } = useTheme();
 
     const undo = useCanvasStore((state) => state.undo);
     const redo = useCanvasStore((state) => state.redo);
@@ -78,7 +80,6 @@ export default function Page({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [undo, redo, slug]);
 
-    // 1. Fetch initial sharing state and shapes if shared
     useEffect(() => {
         if (!slug) return;
         setIsLoadingInitialState(true);
@@ -132,18 +133,26 @@ export default function Page({
     }, [isEraser, isPanMode]);
 
     useEffect(() => {
-        let cleanup: (() => void) | null = null;
+        const init = async () => {
+            if (!canvasRef.current) return;
+            const cleanup = await initDraw(
+                canvasRef.current,
+                slug,
+                socket,
+                shapeTypeRef,
+                isEraserRef,
+                isPanModeRef,
+                resolvedTheme === "dark"
+            );
+            return cleanup;
+        };
 
-        if (canvasRef.current) {
-            initDraw(canvasRef.current, slug, socket, shapeTypeRef, isEraserRef, isPanModeRef).then((cleanupFn) => {
-                cleanup = cleanupFn;
-            });
-        }
+        const cleanupPromise = init();
 
         return () => {
-            if (cleanup) cleanup();
+            cleanupPromise.then(cleanup => cleanup?.());
         };
-    }, [slug, socket, isLoadingInitialState]);
+    }, [slug, socket, resolvedTheme]);
 
     const toggleSharing = async () => {
         setIsTogglingShare(true);
