@@ -16,7 +16,7 @@ interface HeaderProps {
 
 export function Header({ user, initials }: HeaderProps) {
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 dark:border-white/5 border-black/5 bg-[#ffffff]/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl transition-colors">
+        <header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/5 bg-[#ffffff]/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl transition-colors">
             <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
                 <Link href="/" className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 dark:border-white/10 bg-black dark:bg-white transition-colors">
