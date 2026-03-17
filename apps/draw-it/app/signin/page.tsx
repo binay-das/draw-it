@@ -4,6 +4,9 @@ import axios from "axios";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@repo/ui/button";
+import { Input } from "@repo/ui/input";
+import { Label } from "@repo/ui/label";
 
 export default function SigninPage() {
     const [email, setEmail] = useState<string>("");
@@ -47,43 +50,45 @@ export default function SigninPage() {
                     </div>
 
                     <form onSubmit={handleSignin} className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Email address</label>
-                            <input
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="text-gray-300">Email address</Label>
+                            <Input
+                                id="email"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-[#444] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                className="bg-[#2a2a2a] border-[#444] text-white focus-visible:ring-blue-500 h-12"
                                 placeholder="you@example.com"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                            <input
+                        <div className="space-y-2">
+                            <Label htmlFor="password" className="text-gray-300">Password</Label>
+                            <Input
+                                id="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-[#444] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                className="bg-[#2a2a2a] border-[#444] text-white focus-visible:ring-blue-500 h-12"
                                 placeholder="••••••••"
                             />
                         </div>
 
                         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-                        <button
+                        <Button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-blue-900/20 flex items-center justify-center disabled:opacity-50"
+                            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-blue-900/20"
                         >
                             {loading ? (
-                                <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                             ) : (
                                 "Sign in"
                             )}
-                        </button>
+                        </Button>
                     </form>
 
                     <p className="mt-8 text-center text-gray-400">
