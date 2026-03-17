@@ -23,7 +23,7 @@ export default async function Home() {
                                 canvas. Built with Next.js, WebSockets, and Canvas API.
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                                <Link href="/canvas">
+                                <Link href="/dashboard">
                                     <Button className="h-12 w-full sm:w-auto rounded-full bg-black dark:bg-white px-8 text-sm font-medium text-white dark:text-black hover:bg-black/90 dark:hover:bg-white/90 transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(0,0,0,0.3)] dark:shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]">
                                         Open canvas
                                         <svg
