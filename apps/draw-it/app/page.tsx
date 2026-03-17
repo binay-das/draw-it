@@ -4,6 +4,7 @@ import { Github } from "lucide-react";
 import { cookies } from "next/headers";
 import { auth } from "@repo/common";
 import prisma from "@repo/db";
+import { UserProfileModal } from "./components/UserProfileModal";
 
 async function getUser() {
     const cookieStore = await cookies();
@@ -29,7 +30,7 @@ async function getUser() {
 }
 
 function getInitials(name: string): string {
-    return name     
+    return name
         .split(" ")
         .map((n) => n[0])
         .join("")
@@ -71,11 +72,7 @@ export default async function Home() {
                             </Button>
                         </Link>
                         {user ? (
-                            // <Link href="/">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-medium text-white ring-1 ring-white/20 hover:bg-white/20 transition-colors">
-                                    {getInitials(user.name || "U")}
-                                </div>
-                            // </Link>
+                            <UserProfileModal user={user} initials={getInitials(user.name || "U")} />
                         ) : (
                             <Link
                                 href="/signin"

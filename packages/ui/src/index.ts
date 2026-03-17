@@ -8,4 +8,5 @@ export * from "./components/ui/badge";
 export * from "./components/ui/tooltip";
 export * from "./components/ui/separator";
 export * from "./components/ui/label";
+export * from "./components/ui/avatar";
 export * from "./lib/utils";
