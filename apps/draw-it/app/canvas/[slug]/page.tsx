@@ -200,31 +200,30 @@ export default function Page({
 
     if (isLoadingInitialState) {
         return (
-            <div className="w-full h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-900 gap-3">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">Loading canvas...</p>
+            <div className="w-full h-screen flex flex-col items-center justify-center bg-white dark:bg-[#0a0a0a] gap-3 transition-colors">
+                <div className="animate-spin w-8 h-8 border-2 border-black/20 dark:border-white/20 border-t-black dark:border-t-white rounded-full" />
+                <p className="text-sm font-medium text-black dark:text-white">Loading...</p>
             </div>
         );
     }
 
-
     if (isShared && !socket) {
         return (
-            <div className="w-full h-screen flex flex-col items-center justify-center bg-white dark:bg-gray-900 gap-3">
+            <div className="w-full h-screen flex flex-col items-center justify-center bg-white dark:bg-[#0a0a0a] gap-3 transition-colors">
                 {error ? (
                     <>
                         <p className="text-base font-medium text-red-500">{error}</p>
                         <button
                             onClick={() => window.location.reload()}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+                            className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 text-sm transition-colors"
                         >
                             Reload
                         </button>
                     </>
                 ) : (
                     <>
-                        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="animate-spin w-8 h-8 border-2 border-black/20 dark:border-white/20 border-t-black dark:border-t-white rounded-full" />
+                        <p className="text-sm font-medium text-black dark:text-white">
                             {retryCount > 0
                                 ? `Reconnecting… (attempt ${retryCount}/${5})`
                                 : "Connecting to canvas…"}
