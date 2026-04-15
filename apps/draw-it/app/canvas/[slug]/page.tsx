@@ -134,6 +134,7 @@ export default function Page({
 
     useEffect(() => {
         const init = async () => {
+            if (isLoadingInitialState) return;
             if (!canvasRef.current) return;
             const cleanup = await initDraw(
                 canvasRef.current,
@@ -152,7 +153,7 @@ export default function Page({
         return () => {
             cleanupPromise.then(cleanup => cleanup?.());
         };
-    }, [slug, socket, resolvedTheme]);
+    }, [slug, socket, resolvedTheme, isLoadingInitialState]);
 
     const toggleSharing = async () => {
         setIsTogglingShare(true);
