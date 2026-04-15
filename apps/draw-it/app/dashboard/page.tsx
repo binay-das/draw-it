@@ -62,22 +62,31 @@ export default async function DashboardPage() {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {rooms.map((room) => (
-                            <Link href={`/canvas/${room.slug}`} key={room.id} className="group flex flex-col bg-white dark:bg-[#141414] rounded-2xl border border-gray-200 dark:border-[#2a2a2a] overflow-hidden hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/5 transition-all">
-                                <div className="h-32 bg-gray-50 dark:bg-[#1a1a1a] flex items-center justify-center border-b border-gray-100 dark:border-[#222] group-hover:bg-blue-50/50 dark:group-hover:bg-blue-900/10 transition-colors">
-                                    <div className="text-gray-300 dark:text-gray-700 group-hover:text-blue-200 dark:group-hover:text-blue-900/40 transition-colors">
-                                        <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zM5 19V5h14l.002 14H5z" /><path d="m10 14-1-1-3 4h12l-5-7z" /></svg>
+                            <Link href={`/canvas/${room.slug}`} key={room.id} className="group flex flex-col bg-white dark:bg-[#111] rounded-3xl border border-gray-200/80 dark:border-[#222] overflow-hidden hover:border-black/30 dark:hover:border-white/30 hover:shadow-2xl hover:shadow-black/5 dark:hover:shadow-white/5 hover:-translate-y-1 transition-all duration-300">
+                                <div className="h-40 relative overflow-hidden bg-gray-50 dark:bg-[#161616] flex items-center justify-center border-b border-gray-200/80 dark:border-[#222]">
+                                    <div className="absolute inset-0 opacity-[0.06] dark:opacity-0" style={{ backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, black 1.5px, transparent 0)', backgroundSize: '16px 16px' }} />
+                                    <div className="absolute inset-0 opacity-0 dark:opacity-[0.08]" style={{ backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, white 1.5px, transparent 0)', backgroundSize: '16px 16px' }} />
+                                    
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-black/5 dark:bg-white/5 blur-2xl rounded-full group-hover:scale-150 transition-transform duration-700" />
+                                    
+                                    <div className="relative text-black/20 dark:text-white/20 group-hover:scale-110 group-hover:text-black dark:group-hover:text-white transition-all duration-500 transform group-hover:rotate-[5deg]">
+                                        <svg className="w-14 h-14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                                            <rect x="4" y="4" width="10" height="10" rx="2" />
+                                            <circle cx="16" cy="16" r="4" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18l6-6" />
+                                        </svg>
                                     </div>
                                 </div>
-                                <div className="p-5 flex-1 flex flex-col">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate transition-colors">/{room.slug}</h3>
-                                    <div className="flex items-center gap-4 mt-auto pt-4">
-                                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 gap-1.5 transition-colors">
-                                            <Clock size={14} />
+                                <div className="p-6 flex-1 flex flex-col relative bg-white dark:bg-[#111] z-10 transition-colors">
+                                    <h3 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white mb-2 truncate group-hover:text-black dark:group-hover:text-white transition-colors">/{room.slug}</h3>
+                                    <div className="flex items-center gap-4 mt-auto pt-6 border-t border-gray-100 dark:border-[#222]">
+                                        <div className="flex items-center text-xs font-semibold text-gray-500 dark:text-gray-400 gap-1.5">
+                                            <Clock size={14} className="text-gray-400 dark:text-gray-500" />
                                             <span>{formatDistanceToNow(new Date(room.updatedAt), { addSuffix: true })}</span>
                                         </div>
-                                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 gap-1.5 ml-auto transition-colors">
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
-                                            <span>{room._count.shapes} shapes</span>
+                                        <div className="flex items-center text-xs font-bold text-gray-700 dark:text-gray-300 gap-2 ml-auto bg-gray-100 dark:bg-[#1a1a1a] px-3 py-1.5 rounded-full border border-gray-200/50 dark:border-white/5 transition-colors">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white animate-pulse" />
+                                            <span>{room._count.shapes}</span>
                                         </div>
                                     </div>
                                 </div>
