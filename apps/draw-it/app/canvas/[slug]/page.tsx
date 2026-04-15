@@ -247,13 +247,11 @@ export default function Page({
     return (
         <ErrorBoundary>
             <div className="relative w-full h-screen overflow-hidden bg-white dark:bg-gray-900">
-
-
-                <div className="absolute top-4 left-4 z-20">
+                <div className="absolute top-20 left-4 z-20">
                     <Button
                         variant="ghost"
                         onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                        className="p-2 bg-white dark:bg-[#1a1a1a] rounded-lg shadow-md border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white transition-colors"
                         title="Open Rooms Menu"
                     >
                         <Menu size={20} />
@@ -323,12 +321,12 @@ export default function Page({
                     </div>
                 </div>
 
-                <div className="absolute top-4 right-4 z-10 flex items-center gap-3 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="absolute top-20 right-4 z-10 flex items-center gap-3 bg-white dark:bg-[#1a1a1a] p-2 rounded-lg shadow-lg border border-black/10 dark:border-white/10">
                     <Button
                         onClick={() => setIsSharingModalOpen(true)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all shadow-sm active:scale-95 ${isShared
-                            ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-800"
-                            : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600"
+                            ? "bg-black text-white dark:bg-white dark:text-black border border-transparent hover:opacity-80"
+                            : "bg-black/5 text-black hover:bg-black/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 border border-transparent"
                             }`}
                     >
                         <Share2 size={16} />
@@ -336,8 +334,8 @@ export default function Page({
                     </Button>
                 </div>
 
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 flex gap-1">
+                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-lg border border-black/10 dark:border-white/10 p-2 flex gap-1">
                         {shapes.map((shape) => {
                             const Icon = shape.Icon;
                             return (
@@ -347,8 +345,8 @@ export default function Page({
                                     className={`
                                         p-3 rounded-md transition-all
                                         ${selectedShape === shape.type && !isEraser && !isPanMode
-                                            ? "bg-blue-500 text-white shadow-md"
-                                            : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                            ? "bg-black text-white dark:bg-white dark:text-black shadow-md"
+                                            : "bg-transparent text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10"
                                         }
                                     `}
                                     title={shape.label}
@@ -357,12 +355,12 @@ export default function Page({
                                 </button>
                             );
                         })}
-                        <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                        <div className="w-[1px] bg-black/10 dark:bg-white/10 mx-1"></div>
                         <button
                             onClick={() => { setIsEraser((prev) => !prev); setIsPanMode(false); }}
                             className={`p-3 rounded-md transition-all ${isEraser
-                                ? "bg-red-500 text-white shadow-md"
-                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                ? "bg-black text-white dark:bg-white dark:text-black shadow-md"
+                                : "bg-transparent text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10"
                                 }`}
                             title="Eraser (click shape edge to delete)"
                         >
@@ -371,18 +369,18 @@ export default function Page({
                         <button
                             onClick={() => { setIsPanMode((prev) => !prev); setIsEraser(false); }}
                             className={`p-3 rounded-md transition-all ${isPanMode
-                                ? "bg-blue-500 text-white shadow-md"
-                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                ? "bg-black text-white dark:bg-white dark:text-black shadow-md"
+                                : "bg-transparent text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10"
                                 }`}
                             title="Pan (hold and drag to move canvas)"
                         >
                             <Hand size={20} />
                         </button>
-                        <div className="w-[1px] bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                        <div className="w-[1px] bg-black/10 dark:bg-white/10 mx-1"></div>
                         <Button
                             onClick={() => undo(slug as string)}
                             disabled={!canUndo}
-                            className={`p-3 rounded-md transition-all ${canUndo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
+                            className={`p-3 rounded-md transition-all ${canUndo ? "bg-transparent text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10" : "text-black/30 dark:text-white/30 cursor-not-allowed"}`}
                             title="Undo (Ctrl+Z)"
                         >
                             <Undo size={20} />
@@ -390,7 +388,7 @@ export default function Page({
                         <Button
                             onClick={() => redo(slug as string)}
                             disabled={!canRedo}
-                            className={`p-3 rounded-md transition-all ${canRedo ? "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
+                            className={`p-3 rounded-md transition-all ${canRedo ? "bg-transparent text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10" : "text-black/30 dark:text-white/30 cursor-not-allowed"}`}
                             title="Redo (Ctrl+Y)"
                         >
                             <Redo size={20} />
