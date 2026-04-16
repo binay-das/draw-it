@@ -62,7 +62,7 @@ export default async function DashboardPage() {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {rooms.map((room) => (
-                            <Link href={`/canvas/${room.slug}`} key={room.id} className="group flex flex-col bg-white dark:bg-[#111] rounded-3xl border border-gray-200/80 dark:border-[#222] overflow-hidden hover:border-black/30 dark:hover:border-white/30 hover:shadow-2xl hover:shadow-black/5 dark:hover:shadow-white/5 hover:-translate-y-1 transition-all duration-300">
+                            <Link href={`/canvas/${room.id}`} key={room.id} className="group flex flex-col bg-white dark:bg-[#111] rounded-3xl border border-gray-200/80 dark:border-[#222] overflow-hidden hover:border-black/30 dark:hover:border-white/30 hover:shadow-2xl hover:shadow-black/5 dark:hover:shadow-white/5 hover:-translate-y-1 transition-all duration-300">
                                 <div className="h-40 relative overflow-hidden bg-gray-50 dark:bg-[#161616] flex items-center justify-center border-b border-gray-200/80 dark:border-[#222]">
                                     <div className="absolute inset-0 opacity-[0.06] dark:opacity-0" style={{ backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, black 1.5px, transparent 0)', backgroundSize: '16px 16px' }} />
                                     <div className="absolute inset-0 opacity-0 dark:opacity-[0.08]" style={{ backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, white 1.5px, transparent 0)', backgroundSize: '16px 16px' }} />

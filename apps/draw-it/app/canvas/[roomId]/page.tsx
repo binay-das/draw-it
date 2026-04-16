@@ -15,9 +15,9 @@ import { useTheme } from "next-themes";
 export default function Page({
     params
 }: {
-    params: Promise<{ slug: string }>;
+    params: Promise<{ roomId: string }>;
 }) {
-    const { slug } = use(params);
+    const { roomId } = use(params);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [selectedShape, setSelectedShape] = useState<ShapeType>(() => {
         if (typeof window !== "undefined") {
@@ -48,14 +48,14 @@ export default function Page({
     const redo = useCanvasStore((state) => state.redo);
 
     const canUndo = useCanvasStore((state) => {
-        if (!slug) return false;
-        const room = state.rooms[slug as string];
+        if (!roomId) return false;
+        const room = state.rooms[roomId];
         return room ? room.historyStep > 0 : false;
     });
 
     const canRedo = useCanvasStore((state) => {
-        if (!slug) return false;
-        const room = state.rooms[slug as string];
+        if (!roomId) return false;
+        const room = state.rooms[roomId];
         return room ? room.historyStep < room.history.length - 1 : false;
     });
 
@@ -65,25 +65,25 @@ export default function Page({
                 if (e.key === "z") {
                     e.preventDefault();
                     if (e.shiftKey) {
-                        redo(slug as string);
+                        redo(roomId);
                     } else {
-                        undo(slug as string);
+                        undo(roomId);
                     }
                 } else if (e.key === "y") {
                     e.preventDefault();
-                    redo(slug as string);
+                    redo(roomId);
                 }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [undo, redo, slug]);
+    }, [undo, redo, roomId]);
 
     useEffect(() => {
-        if (!slug) return;
+        if (!roomId) return;
         setIsLoadingInitialState(true);
-        axios.get(`/api/shapes/${slug}`)
+        axios.get(`/api/shapes/${roomId}`)
             .then(res => {
                 if (res.data) {
                     setIsShared(Boolean(res.data.isShared));
@@ -95,20 +95,20 @@ export default function Page({
             .finally(() => {
                 setIsLoadingInitialState(false);
             });
-    }, [slug]);
+    }, [roomId]);
 
     const { socket, error, retryCount } = useSocket(!isLoadingInitialState && isShared);
 
     useEffect(() => {
-        if (socket && slug) {
+        if (socket && roomId) {
             socket.send(
                 JSON.stringify({
                     type: "join",
-                    roomSlug: slug
+                    roomId: roomId
                 })
             );
         }
-    }, [socket, slug]);
+    }, [socket, roomId]);
 
     useEffect(() => {
         shapeTypeRef.current = selectedShape;
@@ -138,7 +138,7 @@ export default function Page({
             if (!canvasRef.current) return;
             const cleanup = await initDraw(
                 canvasRef.current,
-                slug,
+                roomId,
                 socket,
                 shapeTypeRef,
                 isEraserRef,
@@ -153,15 +153,15 @@ export default function Page({
         return () => {
             cleanupPromise.then(cleanup => cleanup?.());
         };
-    }, [slug, socket, resolvedTheme, isLoadingInitialState]);
+    }, [roomId, socket, resolvedTheme, isLoadingInitialState]);
 
     const toggleSharing = async () => {
         setIsTogglingShare(true);
         try {
             const newState = !isShared;
-            const currentShapes = useCanvasStore.getState().rooms[slug as string]?.shapes || [];
+            const currentShapes = useCanvasStore.getState().rooms[roomId]?.shapes || [];
 
-            const res = await axios.post(`/api/room/${slug}/share`, {
+            const res = await axios.post(`/api/room/${roomId}/share`, {
                 isShared: newState,
                 shapes: newState ? currentShapes : []
             });
@@ -298,17 +298,17 @@ export default function Page({
                                 {userRooms.map((room) => (
                                     <Link
                                         key={room.id}
-                                        href={`/canvas/${room.slug}`}
+                                        href={`/canvas/${room.id}`}
                                         onClick={() => setIsSidebarOpen(false)}
                                     >
-                                        <div className={`p-3 rounded-lg border transition-all ${room.slug === slug
+                                        <div className={`p-3 rounded-lg border transition-all ${room.id === roomId
                                             ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
                                             : "bg-white border-gray-100 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600 shadow-sm hover:shadow"
                                             }`}>
-                                            <p className={`font-medium truncate ${room.slug === slug ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-200"
+                                            <p className={`font-medium truncate ${room.id === roomId ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-200"
                                                 }`}>
                                                 {room.slug}
-                                                {room.slug === slug && <span className="ml-2 text-[10px] uppercase font-bold text-blue-500 tracking-wider">Current</span>}
+                                                {room.id === roomId && <span className="ml-2 text-[10px] uppercase font-bold text-blue-500 tracking-wider">Current</span>}
                                             </p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1.5">
                                                 Last edited: {new Date(room.updatedAt).toLocaleDateString()}
@@ -378,7 +378,7 @@ export default function Page({
                         </button>
                         <div className="w-[1px] bg-black/10 dark:bg-white/10 mx-1"></div>
                         <Button
-                            onClick={() => undo(slug as string)}
+                            onClick={() => undo(roomId)}
                             disabled={!canUndo}
                             className={`p-3 rounded-md transition-all ${canUndo ? "bg-transparent text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10" : "text-black/30 dark:text-white/30 cursor-not-allowed"}`}
                             title="Undo (Ctrl+Z)"
@@ -386,7 +386,7 @@ export default function Page({
                             <Undo size={20} />
                         </Button>
                         <Button
-                            onClick={() => redo(slug as string)}
+                            onClick={() => redo(roomId)}
                             disabled={!canRedo}
                             className={`p-3 rounded-md transition-all ${canRedo ? "bg-transparent text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10" : "text-black/30 dark:text-white/30 cursor-not-allowed"}`}
                             title="Redo (Ctrl+Y)"

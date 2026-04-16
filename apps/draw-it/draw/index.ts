@@ -42,7 +42,7 @@ function loadViewport(slug: string): ViewportState {
 
 export async function initDraw(
     canvas: HTMLCanvasElement,
-    slug: string,
+    roomId: string,
     socket: WebSocket | null,
     shapeTypeRef: { current: ShapeType },
     isEraserRef: { current: boolean },
@@ -70,7 +70,7 @@ export async function initDraw(
     // shapes are now managed by Zustand store
 
     // load saved viewport state
-    const savedViewport = loadViewport(slug);
+    const savedViewport = loadViewport(roomId);
 
     // zoom and pan state
     let scale = savedViewport.scale;
@@ -85,14 +85,14 @@ export async function initDraw(
     function debouncedSaveViewport() {
         if (saveTimer) clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
-            saveViewport(slug, scale, offsetX, offsetY);
+            saveViewport(roomId, scale, offsetX, offsetY);
         }, 300);
     }
 
     try {
-        const response = await axios.get<{ shapes: Shape[] }>(`/api/shapes/${slug}`);
+        const response = await axios.get<{ shapes: Shape[] }>(`/api/shapes/${roomId}`);
         if (response.data && response.data.shapes) {
-            useCanvasStore.getState().setShapes(slug, response.data.shapes);
+            useCanvasStore.getState().setShapes(roomId, response.data.shapes);
         }
     } catch (error) {
         console.error("Error fetching existing shapes:", error);
@@ -145,22 +145,22 @@ export async function initDraw(
         }
 
         if (editingTextIndex !== null) {
-            const currentRoomState = useCanvasStore.getState().rooms[slug];
+            const currentRoomState = useCanvasStore.getState().rooms[roomId];
             const currentShapes = currentRoomState ? [...currentRoomState.shapes] : [];
             const shape = currentShapes[editingTextIndex];
             if (shape) {
                 const newShape = { ...shape, text: text };
                 currentShapes[editingTextIndex] = newShape;
-                useCanvasStore.getState().setShapes(slug, currentShapes);
+                useCanvasStore.getState().setShapes(roomId, currentShapes);
 
                 if (socket && socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         type: "chat",
-                        roomSlug: slug,
+                        roomId: roomId,
                         message: newShape
                     }));
                 } else {
-                    axios.post(`/api/shapes/${slug}`, {
+                    axios.post(`/api/shapes/${roomId}`, {
                         action: "add",
                         shape: newShape
                     }).catch(err => console.error("Failed to save edited text shape:", err));
@@ -181,15 +181,15 @@ export async function initDraw(
                 text
             };
 
-            useCanvasStore.getState().addShape(slug, textShape);
+            useCanvasStore.getState().addShape(roomId, textShape);
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     type: "chat",
-                    roomSlug: slug,
+                    roomId: roomId,
                     message: textShape
                 }));
             } else {
-                axios.post(`/api/shapes/${slug}`, {
+                axios.post(`/api/shapes/${roomId}`, {
                     action: "add",
                     shape: textShape
                 }).catch(err => console.error("Failed to save new text shape:", err));
@@ -303,7 +303,7 @@ export async function initDraw(
     }
 
     function eraseShapeAt(px: number, py: number) {
-        const currentRoomState = useCanvasStore.getState().rooms[slug];
+        const currentRoomState = useCanvasStore.getState().rooms[roomId];
         const currentShapes = currentRoomState ? currentRoomState.shapes : [];
         // erase the topmost drawn shape first
         for (let i = currentShapes.length - 1; i >= 0; i--) {
@@ -311,15 +311,15 @@ export async function initDraw(
             if (!shape) continue;
             if (hitTestShape(shape, px, py)) {
                 const newShapes = currentShapes.filter((_, idx) => idx !== i);
-                useCanvasStore.getState().setShapes(slug, newShapes);
+                useCanvasStore.getState().setShapes(roomId, newShapes);
                 if (socket && socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         type: "delete",
-                        roomSlug: slug,
+                        roomId: roomId,
                         message: shape
                     }));
                 } else {
-                    axios.post(`/api/shapes/${slug}`, {
+                    axios.post(`/api/shapes/${roomId}`, {
                         action: "delete",
                         shape: shape
                     }).catch(err => console.error("Failed to delete shape:", err));
@@ -402,7 +402,7 @@ export async function initDraw(
         context.strokeStyle = isDark ? "#ffffff" : "#000000";
         context.lineWidth = 2 / scale;
 
-        const currentRoomState = useCanvasStore.getState().rooms[slug];
+        const currentRoomState = useCanvasStore.getState().rooms[roomId];
         if (currentRoomState && currentRoomState.shapes) {
             currentRoomState.shapes.forEach(drawShape);
         }
@@ -527,7 +527,7 @@ export async function initDraw(
             shape.points = currentPencilPoints.map(p => ({ x: p.x - minX, y: p.y - minY }));
         }
 
-        useCanvasStore.getState().addShape(slug, shape);
+        useCanvasStore.getState().addShape(roomId, shape);
         clearCanvas();
 
         currentPencilPoints = [];
@@ -535,11 +535,11 @@ export async function initDraw(
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
                 type: "chat",
-                roomSlug: slug,
+                roomId: roomId,
                 message: shape
             }));
         } else {
-            axios.post(`/api/shapes/${slug}`, {
+            axios.post(`/api/shapes/${roomId}`, {
                 action: "add",
                 shape: shape
             }).catch(err => console.error("Failed to save new shape:", err));
@@ -617,7 +617,7 @@ export async function initDraw(
                 if (socket && socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         type: "draw-stream",
-                        roomSlug: slug,
+                        roomId: roomId,
                         message: activeShape
                     }));
                 }
@@ -648,16 +648,16 @@ export async function initDraw(
     const handleSocketMessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
 
-        if (data.type === "delete" && data.roomSlug === slug) {
+        if (data.type === "delete" && data.roomId === roomId) {
             const deletedShape = JSON.stringify(data.message);
-            const currentRoomState = useCanvasStore.getState().rooms[slug];
+            const currentRoomState = useCanvasStore.getState().rooms[roomId];
             const currentShapes = currentRoomState ? currentRoomState.shapes : [];
             const newShapes = currentShapes.filter(s => JSON.stringify(s) !== deletedShape);
-            useCanvasStore.getState().setShapes(slug, newShapes);
+            useCanvasStore.getState().setShapes(roomId, newShapes);
             return;
         }
 
-        if (data.type === "draw-stream" && data.roomSlug === slug) {
+        if (data.type === "draw-stream" && data.roomId === roomId) {
 
             if (!isClicked) {
                 clearActiveLayer();
@@ -672,15 +672,15 @@ export async function initDraw(
             }
         }
 
-        if (data.type === "chat" && data.roomSlug === slug) {
+        if (data.type === "chat" && data.roomId === roomId) {
             clearActiveLayer(); // Clear any streamed active shapes when the final one arrives
-            useCanvasStore.getState().addShape(slug, data.message);
+            useCanvasStore.getState().addShape(roomId, data.message);
             clearCanvas();
         }
     };
 
     const unsubZustand = useCanvasStore.subscribe((state, prevState) => {
-        if (state.rooms[slug]?.shapes !== prevState.rooms[slug]?.shapes) {
+        if (state.rooms[roomId]?.shapes !== prevState.rooms[roomId]?.shapes) {
             clearCanvas();
         }
     });

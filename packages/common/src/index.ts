@@ -38,25 +38,25 @@ export const ShapeSchema = z.object({
 export const WsMessageSchema = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("join"),
-        roomSlug: z.string()
+        roomId: z.string()
     }),
     z.object({
         type: z.literal("leave"),
-        roomSlug: z.string()
+        roomId: z.string()
     }),
     z.object({
         type: z.literal("chat"),
-        roomSlug: z.string(),
+        roomId: z.string(),
         message: ShapeSchema
     }),
     z.object({
         type: z.literal("delete"),
-        roomSlug: z.string(),
+        roomId: z.string(),
         message: ShapeSchema
     }),
     z.object({
         type: z.literal("draw-stream"),
-        roomSlug: z.string(),
+        roomId: z.string(),
         message: ShapeSchema
     })
 ]);

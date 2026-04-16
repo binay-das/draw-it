@@ -10,7 +10,7 @@ const wss = new WebSocketServer({ port: 8080 });
 
 interface User {
     userId: string;
-    roomSlugs: string[];
+    roomIds: string[];
     ws: WebSocket;
 }
 
@@ -69,7 +69,7 @@ wss.on("connection", (ws, req) => {
 
     users.push({
         userId,
-        roomSlugs: [],
+        roomIds: [],
         ws
     });
 
@@ -106,26 +106,21 @@ wss.on("connection", (ws, req) => {
                 return;
             }
 
-            const roomSlug = parsedData.roomSlug;
-            if (user.roomSlugs.includes(roomSlug)) {
-                console.log(`User ${userId} already in room ${roomSlug}`);
+            const roomId = parsedData.roomId;
+            if (user.roomIds.includes(roomId)) {
+                console.log(`User ${userId} already in room ${roomId}`);
                 return;
             }
-            user.roomSlugs.push(roomSlug);
-            console.log(`User ${userId} joined room ${roomSlug}`);
 
+            // Verify room exists
+            const room = await prisma.room.findUnique({ where: { id: roomId } });
+            if (!room) {
+                ws.send(JSON.stringify({ type: "error", message: "Room not found" }));
+                return;
+            }
 
-            await prisma.room.upsert({
-                where: { slug: roomSlug },
-                update: {},
-                create: {
-                    slug: roomSlug,
-                    adminId: userId
-                }
-            });
-
-            console.log("room pushed to db")
-
+            user.roomIds.push(roomId);
+            console.log(`User ${userId} joined room ${roomId}`);
             console.log("total no of connected users: ", users.length);
         }
 
@@ -134,29 +129,32 @@ wss.on("connection", (ws, req) => {
             if (!user) {
                 return;
             }
-            const roomSlug = parsedData.roomSlug;
-            if (!user.roomSlugs.includes(roomSlug)) {
-                console.log(`User ${userId} not in room ${roomSlug}`);
+            const roomId = parsedData.roomId;
+            if (!user.roomIds.includes(roomId)) {
+                console.log(`User ${userId} not in room ${roomId}`);
                 return;
             }
-            user.roomSlugs = user.roomSlugs.filter((slug) => slug !== roomSlug);
-            console.log(`User ${userId} left room ${roomSlug}`);
+            user.roomIds = user.roomIds.filter((id) => id !== roomId);
+            console.log(`User ${userId} left room ${roomId}`);
         }
 
         if (parsedData.type === "chat") {
             const user = users.find((u) => u.ws === ws);
             if (!user) return;
 
-            const roomSlug = parsedData.roomSlug;
-            if (!user.roomSlugs.includes(roomSlug)) return;
+            const roomId = parsedData.roomId;
+            if (!user.roomIds.includes(roomId)) {
+                return;
+            }
+
 
             const shape = parsedData.message;
 
             users.forEach((u) => {
-                if (u.ws !== ws && u.roomSlugs.includes(roomSlug)) {
+                if (u.ws !== ws && u.roomIds.includes(roomId)) {
                     u.ws.send(JSON.stringify({
                         type: "chat",
-                        roomSlug,
+                        roomId,
                         message: shape
                     }));
                 }
@@ -172,7 +170,7 @@ wss.on("connection", (ws, req) => {
                     text: shape.text ?? null,
                     points: shape.points ? JSON.stringify(shape.points) : null,
                     user: { connect: { id: userId } },
-                    room: { connect: { slug: roomSlug } }
+                    room: { connect: { id: roomId } }
                 }
             });
         }
@@ -181,22 +179,22 @@ wss.on("connection", (ws, req) => {
             const user = users.find((u) => u.ws === ws);
             if (!user) return;
 
-            const roomSlug = parsedData.roomSlug;
-            if (!user.roomSlugs.includes(roomSlug)) return;
+            const roomId = parsedData.roomId;
+            if (!user.roomIds.includes(roomId)) return;
 
             const shape = parsedData.message;
 
             users.forEach((u) => {
-                if (u.ws !== ws && u.roomSlugs.includes(roomSlug)) {
+                if (u.ws !== ws && u.roomIds.includes(roomId)) {
                     u.ws.send(JSON.stringify({
                         type: "delete",
-                        roomSlug,
+                        roomId,
                         message: shape
                     }));
                 }
             });
 
-            const room = await prisma.room.findUnique({ where: { slug: roomSlug } });
+            const room = await prisma.room.findUnique({ where: { id: roomId } });
             if (room) {
                 await prisma.shape.deleteMany({
                     where: {
@@ -217,16 +215,16 @@ wss.on("connection", (ws, req) => {
             const user = users.find((u) => u.ws === ws);
             if (!user) return;
 
-            const roomSlug = parsedData.roomSlug;
-            if (!user.roomSlugs.includes(roomSlug)) return;
+            const roomId = parsedData.roomId;
+            if (!user.roomIds.includes(roomId)) return;
 
             // Broadcast active drawing shape to everyone else in the room
             // Do NOT persist to database — it's transient until mouseup
             users.forEach((u) => {
-                if (u.ws !== ws && u.roomSlugs.includes(roomSlug)) {
+                if (u.ws !== ws && u.roomIds.includes(roomId)) {
                     u.ws.send(JSON.stringify({
                         type: "draw-stream",
-                        roomSlug,
+                        roomId,
                         message: parsedData.message
                     }));
                 }

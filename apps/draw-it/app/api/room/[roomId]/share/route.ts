@@ -4,7 +4,7 @@ import { auth } from "@repo/common";
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: Promise<{ slug: string }> }
+    { params }: { params: Promise<{ roomId: string }> }
 ) {
     try {
         const token = req.cookies.get("token")?.value;
@@ -14,7 +14,7 @@ export async function POST(
         if (!authResult.valid) return NextResponse.json({ error: authResult.message }, { status: 401 });
 
         const userId = authResult.id;
-        const { slug } = await params;
+        const { roomId } = await params;
 
         const body = await req.json();
         const isShared = Boolean(body.isShared);
@@ -24,7 +24,7 @@ export async function POST(
             return NextResponse.json({ error: "Invalid request body: isShared must be boolean" }, { status: 400 });
         }
 
-        const room = await prisma.room.findUnique({ where: { slug } });
+        const room = await prisma.room.findUnique({ where: { id: roomId } });
         if (!room) return NextResponse.json({ error: "Room not found" }, { status: 404 });
 
         if (room.adminId !== userId) {

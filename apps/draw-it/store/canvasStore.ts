@@ -20,11 +20,11 @@ interface RoomCanvasState {
 interface CanvasState {
     rooms: Record<string, RoomCanvasState>;
 
-    addShape: (slug: string, shape: Shape) => void;
-    setShapes: (slug: string, shapes: Shape[]) => void;
-    undo: (slug: string) => void;
-    redo: (slug: string) => void;
-    clear: (slug: string) => void;
+    addShape: (roomId: string, shape: Shape) => void;
+    setShapes: (roomId: string, shapes: Shape[]) => void;
+    undo: (roomId: string) => void;
+    redo: (roomId: string) => void;
+    clear: (roomId: string) => void;
 }
 
 export const useCanvasStore = create<CanvasState>()(
@@ -32,9 +32,9 @@ export const useCanvasStore = create<CanvasState>()(
         (set, get) => ({
             rooms: {},
 
-            addShape: (slug: string, shape: Shape) => {
+            addShape: (roomId: string, shape: Shape) => {
                 const { rooms } = get();
-                const roomState = rooms[slug] || { shapes: [], history: [[]], historyStep: 0 };
+                const roomState = rooms[roomId] || { shapes: [], history: [[]], historyStep: 0 };
                 const newShapes = [...roomState.shapes, shape];
 
                 const newHistory = roomState.history.slice(0, roomState.historyStep + 1);
@@ -43,7 +43,7 @@ export const useCanvasStore = create<CanvasState>()(
                 set({
                     rooms: {
                         ...rooms,
-                        [slug]: {
+                        [roomId]: {
                             shapes: newShapes,
                             history: newHistory,
                             historyStep: newHistory.length - 1
@@ -52,12 +52,12 @@ export const useCanvasStore = create<CanvasState>()(
                 });
             },
 
-            setShapes: (slug: string, shapes: Shape[]) => {
+            setShapes: (roomId: string, shapes: Shape[]) => {
                 const { rooms } = get();
                 set({
                     rooms: {
                         ...rooms,
-                        [slug]: {
+                        [roomId]: {
                             shapes,
                             history: [shapes],
                             historyStep: 0
@@ -66,16 +66,16 @@ export const useCanvasStore = create<CanvasState>()(
                 });
             },
 
-            undo: (slug: string) => {
+            undo: (roomId: string) => {
                 const { rooms } = get();
-                const roomState = rooms[slug];
+                const roomState = rooms[roomId];
                 if (roomState && roomState.historyStep > 0) {
                     const newStep = roomState.historyStep - 1;
                     const restoredShapes = roomState.history[newStep] || [];
                     set({
                         rooms: {
                             ...rooms,
-                            [slug]: {
+                            [roomId]: {
                                 shapes: restoredShapes,
                                 history: roomState.history,
                                 historyStep: newStep
@@ -85,16 +85,16 @@ export const useCanvasStore = create<CanvasState>()(
                 }
             },
 
-            redo: (slug: string) => {
+            redo: (roomId: string) => {
                 const { rooms } = get();
-                const roomState = rooms[slug];
+                const roomState = rooms[roomId];
                 if (roomState && roomState.historyStep < roomState.history.length - 1) {
                     const newStep = roomState.historyStep + 1;
                     const restoredShapes = roomState.history[newStep] || [];
                     set({
                         rooms: {
                             ...rooms,
-                            [slug]: {
+                            [roomId]: {
                                 shapes: restoredShapes,
                                 history: roomState.history,
                                 historyStep: newStep
@@ -104,12 +104,12 @@ export const useCanvasStore = create<CanvasState>()(
                 }
             },
 
-            clear: (slug: string) => {
+            clear: (roomId: string) => {
                 const { rooms } = get();
                 set({
                     rooms: {
                         ...rooms,
-                        [slug]: {
+                        [roomId]: {
                             shapes: [],
                             history: [[]],
                             historyStep: 0

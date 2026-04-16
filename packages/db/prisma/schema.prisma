@@ -21,7 +21,7 @@ model User {
 
 model Room {
   id       String  @id @default(cuid())
-  slug     String  @unique
+  slug     String
   isShared Boolean @default(false)
 
   adminId String
@@ -32,6 +32,7 @@ model Room {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([adminId, slug])
   @@index([adminId])
 }
 

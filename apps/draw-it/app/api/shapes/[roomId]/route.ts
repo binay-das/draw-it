@@ -4,7 +4,7 @@ import { auth, ShapeSchema } from "@repo/common";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ slug: string }> }
+    { params }: { params: Promise<{ roomId: string }> }
 ) {
     try {
         const token = req.cookies.get("token")?.value;
@@ -23,16 +23,15 @@ export async function GET(
             );
         }
 
-        const { slug } = await params;
+        const { roomId } = await params;
 
-        const room = await prisma.room.upsert({
-            where: { slug },
-            update: {},
-            create: {
-                slug,
-                adminId: authResult.id
-            }
+        const room = await prisma.room.findUnique({
+            where: { id: roomId }
         });
+
+        if (!room) {
+            return NextResponse.json({ error: "Room not found" }, { status: 404 });
+        }
 
         const rawShapes = await prisma.shape.findMany({
             where: { roomId: room.id },
@@ -76,7 +75,7 @@ export async function GET(
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: Promise<{ slug: string }> }
+    { params }: { params: Promise<{ roomId: string }> }
 ) {
     try {
         const token = req.cookies.get("token")?.value;
@@ -86,9 +85,9 @@ export async function POST(
         if (!authResult.valid) return NextResponse.json({ error: authResult.message }, { status: 401 });
 
         const userId = authResult.id;
-        const { slug } = await params;
+        const { roomId } = await params;
 
-        const room = await prisma.room.findUnique({ where: { slug } });
+        const room = await prisma.room.findUnique({ where: { id: roomId } });
         if (!room) return NextResponse.json({ error: "Room not found" }, { status: 404 });
 
         const body = await req.json();
