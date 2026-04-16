@@ -101,7 +101,7 @@ wss.on("connection", (ws, req) => {
         console.log("Parsed Data: ", parsedData);
 
         if (parsedData.type === "join") {
-            const user = users.find((user) => user.userId === userId);
+            const user = users.find((user) => user.ws === ws);
             if (!user) {
                 return;
             }
@@ -130,7 +130,7 @@ wss.on("connection", (ws, req) => {
         }
 
         if (parsedData.type === "leave") {
-            const user = users.find((user) => user.userId === userId);
+            const user = users.find((user) => user.ws === ws);
             if (!user) {
                 return;
             }
@@ -144,7 +144,7 @@ wss.on("connection", (ws, req) => {
         }
 
         if (parsedData.type === "chat") {
-            const user = users.find((u) => u.userId === userId);
+            const user = users.find((u) => u.ws === ws);
             if (!user) return;
 
             const roomSlug = parsedData.roomSlug;
@@ -178,7 +178,7 @@ wss.on("connection", (ws, req) => {
         }
 
         if (parsedData.type === "delete") {
-            const user = users.find((u) => u.userId === userId);
+            const user = users.find((u) => u.ws === ws);
             if (!user) return;
 
             const roomSlug = parsedData.roomSlug;
@@ -214,7 +214,7 @@ wss.on("connection", (ws, req) => {
         }
 
         if (parsedData.type === "draw-stream") {
-            const user = users.find((u) => u.userId === userId);
+            const user = users.find((u) => u.ws === ws);
             if (!user) return;
 
             const roomSlug = parsedData.roomSlug;
@@ -236,7 +236,7 @@ wss.on("connection", (ws, req) => {
     })
 
     ws.on("close", () => {
-        const userIndex = users.findIndex((user) => user.userId === userId);
+        const userIndex = users.findIndex((user) => user.ws === ws);
         if (userIndex === -1) {
             return;
         }
