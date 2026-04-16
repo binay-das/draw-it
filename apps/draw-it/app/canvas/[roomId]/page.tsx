@@ -251,10 +251,10 @@ export default function Page({
                     <Button
                         variant="ghost"
                         onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 bg-white dark:bg-[#1a1a1a] rounded-lg shadow-md border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white transition-colors"
+                        className="w-10 h-10 flex items-center justify-center bg-white/80 dark:bg-black/20 backdrop-blur-md rounded-full border border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-90 shadow-sm"
                         title="Open Rooms Menu"
                     >
-                        <Menu size={20} />
+                        <Menu size={18} className="text-black/60 dark:text-white/60" />
                     </Button>
                 </div>
 
@@ -268,51 +268,56 @@ export default function Page({
 
 
                 <div
-                    className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+                    className={`fixed top-0 left-0 h-full w-72 bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl border-r border-black/5 dark:border-white/5 z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
                         }`}
                 >
-                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                            <Clock size={18} className="text-blue-500" />
-                            Recent Rooms
+                    <div className="p-5 flex items-center justify-between">
+                        <h2 className="text-sm font-semibold text-black/60 dark:text-white/60 mb-0 ml-2">
+                            Created Rooms
                         </h2>
                         <button
                             onClick={() => setIsSidebarOpen(false)}
-                            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                            className="p-2 rounded-full text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                         >
                             <XIcon size={18} />
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-3">
+                    <div className="flex-1 overflow-y-auto px-3 py-2 custom-scrollbar">
                         {isLoadingRooms ? (
                             <div className="flex justify-center p-8">
-                                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                <Loader2 className="w-5 h-5 animate-spin text-black/20 dark:text-white/20" />
                             </div>
                         ) : userRooms.length === 0 ? (
-                            <div className="text-center p-8 text-sm text-gray-500 dark:text-gray-400">
-                                You haven't created any rooms yet.
+                            <div className="text-center p-6 text-xs text-black/40 dark:text-white/40 font-medium">
+                                No rooms created
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-1">
                                 {userRooms.map((room) => (
                                     <Link
                                         key={room.id}
                                         href={`/canvas/${room.id}`}
                                         onClick={() => setIsSidebarOpen(false)}
+                                        className="group"
                                     >
-                                        <div className={`p-3 rounded-lg border transition-all ${room.id === roomId
-                                            ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
-                                            : "bg-white border-gray-100 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600 shadow-sm hover:shadow"
+                                        <div className={`relative px-4 py-2.5 rounded-full transition-all duration-200 flex items-center justify-between ${room.id === roomId
+                                            ? "bg-black/5 dark:bg-white/10"
+                                            : "hover:bg-black/5 dark:hover:bg-white/5"
                                             }`}>
-                                            <p className={`font-medium truncate ${room.id === roomId ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-200"
-                                                }`}>
-                                                {room.slug}
-                                                {room.id === roomId && <span className="ml-2 text-[10px] uppercase font-bold text-blue-500 tracking-wider">Current</span>}
-                                            </p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1.5">
-                                                Last edited: {new Date(room.updatedAt).toLocaleDateString()}
-                                            </p>
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                                    room.id === roomId 
+                                                    ? "bg-black dark:bg-white animate-pulse" 
+                                                    : "bg-transparent group-hover:bg-black/20 dark:group-hover:bg-white/20"
+                                                }`} />
+                                                <p className={`text-sm font-medium truncate tracking-tight ${room.id === roomId ? "text-black dark:text-white" : "text-black/70 dark:text-white/70"}`}>
+                                                    {room.slug}
+                                                </p>
+                                            </div>
+                                            {room.id === roomId && (
+                                                <div className="w-1 h-1 rounded-full bg-black dark:bg-white" />
+                                            )}
                                         </div>
                                     </Link>
                                 ))}
