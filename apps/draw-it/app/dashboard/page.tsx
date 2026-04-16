@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { Plus, Clock, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { CreateRoomModal } from "../components/CreateRoomModal";
+import { RoomActionsDropdown } from "../components/RoomActionsDropdown";
 import { DeleteRoomButton } from "../components/DeleteRoomButton";
 
 async function getUser() {
@@ -39,26 +39,21 @@ export default async function DashboardPage() {
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors">Your Canvas Rooms</h1>
                         <p className="text-gray-500 dark:text-gray-400 transition-colors">Manage and jump back into your recent drawings.</p>
                     </div>
-                    <CreateRoomModal>
-                        <Button className="h-11 px-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
-                            <Plus size={18} />
-                            Create / Join Room
-                        </Button>
-                    </CreateRoomModal>
+                    <RoomActionsDropdown />
                 </div>
 
                 {rooms.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-gray-50 dark:bg-[#111] rounded-3xl border border-gray-100 dark:border-[#222] transition-colors">
-                        <div className="w-20 h-20 mb-6 rounded-full bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                            <Plus size={32} />
+                    <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-gray-50 dark:bg-[#111] rounded-3xl border border-gray-100 dark:border-[#222] transition-colors overflow-hidden relative group/empty">
+                        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, currentColor 1.5px, transparent 0)', backgroundSize: '24px 24px' }} />
+                        
+                        <div className="w-24 h-24 mb-8 rounded-3xl bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-500 shadow-inner">
+                            <Plus size={40} strokeWidth={1.5} />
                         </div>
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 transition-colors">No rooms found</h2>
-                        <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-8 transition-colors">You haven't created or joined any rooms yet. Start your first drawing session now.</p>
-                        <CreateRoomModal>
-                            <Button className="h-10 px-6 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-black/90 dark:hover:bg-white/90 transition-colors">
-                                Start drawing
-                            </Button>
-                        </CreateRoomModal>
+                        
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3 transition-colors tracking-tight">Ready to create?</h2>
+                        <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-10 transition-colors leading-relaxed">
+                            You haven't created or joined any rooms yet. Click the <span className="text-blue-600 dark:text-blue-400 font-bold px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/10 rounded-md">Create / Join Room</span> button at the top-right to start your first session.
+                        </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
