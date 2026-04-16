@@ -41,6 +41,11 @@ export function Header({ user, initials }: HeaderProps) {
                     </span>
                 </Link>
                 <div className="flex items-center gap-3">
+                    <Link href="/documentaion">
+                        <Button className="h-9 rounded-full bg-transparent text-black px-5 text-xs font-medium dark:text-white transition-transform hover:scale-105 active:scale-95">
+                            Docs
+                        </Button>
+                    </Link>
                     <Link href="/dashboard">
                         <Button className="h-9 rounded-full bg-black text-white dark:bg-white px-5 text-xs font-medium dark:text-black transition-transform hover:scale-105 active:scale-95">
                             Start drawing
